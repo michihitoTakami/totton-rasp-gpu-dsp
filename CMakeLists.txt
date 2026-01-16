@@ -52,11 +52,27 @@ endif()
 
 if(ENABLE_ALSA)
     find_package(ALSA REQUIRED)
-    add_executable(alsa_streamer
+    add_library(alsa_utils
         src/alsa/alsa_common.cpp
         src/alsa/alsa_filter_selector.cpp
+    )
+    target_include_directories(alsa_utils PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+    target_link_libraries(alsa_utils PUBLIC ALSA::ALSA)
+
+    add_executable(alsa_streamer
         src/alsa/alsa_streamer_main.cpp
     )
-    target_include_directories(alsa_streamer PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
-    target_link_libraries(alsa_streamer PRIVATE vulkan_upsampler ALSA::ALSA)
+    target_link_libraries(alsa_streamer PRIVATE vulkan_upsampler alsa_utils)
+
+    add_executable(alsa_common_smoke
+        tests/cpp/test_alsa_common.cpp
+    )
+    target_link_libraries(alsa_common_smoke PRIVATE alsa_utils)
+    add_test(NAME alsa_common_smoke COMMAND alsa_common_smoke)
+
+    add_executable(alsa_filter_selector_smoke
+        tests/cpp/test_alsa_filter_selector.cpp
+    )
+    target_link_libraries(alsa_filter_selector_smoke PRIVATE alsa_utils)
+    add_test(NAME alsa_filter_selector_smoke COMMAND alsa_filter_selector_smoke)
 endif()
