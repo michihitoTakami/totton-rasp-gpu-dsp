@@ -15,8 +15,9 @@ This repository hosts the minimal GPU upsampler that migrates Vulkan+EQ+FastAPI/
 ### Setup overview
 1. Run `uv sync` to gather Python/C++/Vulkan dependencies (reusing `uv.lock`).
 2. Generate filters via `uv run python scripts/filters/generate_minimum_phase.py` if required.
-3. Run `pre-commit run --all-files` using the provided `.pre-commit-config.yaml`.
-4. Use `aqua.yaml` to keep lint/format tooling consistent via Aqua CLI.
+3. Configure the build with `cmake -B build -DENABLE_VULKAN=ON` (and `-DUSE_VKFFT=ON` if needed).
+4. Run `pre-commit run --all-files` using the provided `.pre-commit-config.yaml`.
+5. Use `aqua.yaml` to keep lint/format tooling consistent via Aqua CLI.
 
 ### Expected outcomes
 - Bundle binaries, filters, and configuration examples into the Pi (arm64) release
@@ -37,6 +38,7 @@ build/     : Build artifacts
 ### References & next steps
 - Deliver on the goals/completion criteria defined in [Issue #1](https://github.com/michihitoTakami/totton-rasp-gpu-dsp/issues/1).
 - Start filling the child issues such as `Vulkan upsampler core (#2)`, `EQ (#5)`, `FastAPI UI/API (#6)`, etc.
+- Filter sidecar format is documented in `docs/filter_format.md`.
 
 ### Contribution
 - Use GitHub CLI `gh` for Issue/PR workflows
@@ -58,8 +60,9 @@ build/     : Build artifacts
 ### セットアップの概要
 1. `uv sync` で Python/C++/Vulkan 関連依存を整理（`uv.lock` を再利用）
 2. 必要に応じて `uv run python scripts/filters/generate_minimum_phase.py` などでフィルタを生成
-3. `.pre-commit-config.yaml` で `pre-commit run --all-files` を実行
-4. `aqua.yaml` を使って Aqua CLI で lint/format を統一
+3. `cmake -B build -DENABLE_VULKAN=ON`（必要に応じて `-DUSE_VKFFT=ON`）でビルド設定を作成
+4. `.pre-commit-config.yaml` で `pre-commit run --all-files` を実行
+5. `aqua.yaml` を使って Aqua CLI で lint/format を統一
 
 ### 期待する成果
 - Pi (arm64) 向けリリースにバイナリ・フィルタ・設定例を添付
@@ -80,6 +83,7 @@ build/     : ビルドアウトプット
 ### 参照と今後の流れ
 - [Issue #1](https://github.com/michihitoTakami/totton-rasp-gpu-dsp/issues/1) に書かれた EPIC の目的と完了条件を満たす
 - `Vulkan upsampler コア (#2)`、`EQ (#5)`、`FastAPI UI/API (#6)` などの子 Issue を順次埋めていく
+- フィルタのサイドカー形式は `docs/filter_format.md` を参照
 
 ### コントリビューション
 - GitHub CLI `gh` で Issue/PR 操作

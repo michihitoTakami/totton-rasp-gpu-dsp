@@ -10,6 +10,45 @@
 exclude: ^third_party/
 
 repos:
+  # Pre-push: configure build with compile_commands and run tests
+  - repo: local
+    hooks:
+      - id: prepare-build
+        name: Prepare build directory
+        entry: |
+          bash -c '
+            set -euo pipefail
+            "${CMAKE_BIN:-/usr/bin/cmake}" -S . -B build \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+              -DENABLE_VULKAN=OFF \
+              -DUSE_VKFFT=OFF
+          '
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
+        always_run: true
+      - id: build-and-test
+        name: Build & ctest
+        entry: |
+          bash -c '
+            set -euo pipefail
+            "${CMAKE_BIN:-/usr/bin/cmake}" --build build --parallel
+            /usr/bin/ctest --test-dir build --output-on-failure --parallel 2
+          '
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
+        always_run: true
+      - id: diff-based-tests
+        name: Run diff-based tests
+        entry: ./scripts/deployment/run_tests.sh
+        language: system
+        stages: [pre-push]
+        pass_filenames: false
+        exclude: ^third_party/
+        always_run: true
+
   # clang-format for C/C++/CUDA formatting
   - repo: https://github.com/pre-commit/mirrors-clang-format
     rev: v18.1.8
@@ -18,16 +57,13 @@ repos:
         types_or: [c, c++]
         files: \.(c|cpp|h|hpp|cu|cuh)$
 
-  # clang-tidy for C/C++ static analysis (pre-push only - heavy)
-  # Note: Only .cpp files targeted (headers analyzed transitively)
-  # CUDA projects have incompatible compile flags for clang-tidy
+  # clang-tidy for C/C++ static analysis (pre-push only)
   - repo: https://github.com/pocc/pre-commit-hooks
     rev: v1.3.5
     hooks:
       - id: clang-tidy
         args: [-p=build]
-        files: \.(c|cpp)$
-        exclude: ^(third_party/|build/|raspberry_pi/|jetson_pcm_receiver/|samples/vkfft_minimal/)
+        files: ^(src/|include/|tests/).*\.(c|cpp|h|hpp)$
         stages: [pre-push]
 
   # General file checks
@@ -71,134 +107,4 @@ repos:
       - id: detect-secrets
         args: ['--baseline', '.secrets.baseline']
 
-  # Pre-push: Type checking with mypy and Raspberry Pi clang-tidy
-  # Uses system Python to access project dependencies
-  - repo: local
-    hooks:
-      - id: prepare-raspberry-pi-build
-        name: Prepare raspberry_pi compile_commands
-        entry: bash -c '"${CMAKE_BIN:-/usr/bin/cmake}" -S raspberry_pi -B raspberry_pi/build -DCMAKE_BUILD_TYPE=Release'
-        language: system
-        files: ^raspberry_pi/.*\.(c|cpp|h|hpp|cu|cuh)$
-        pass_filenames: false
-        stages: [pre-push]
-      - id: clang-tidy-raspberry-pi
-        name: clang-tidy (raspberry_pi)
-        entry: clang-tidy
-        language: system
-        types_or: [c, c++]
-        files: ^raspberry_pi/.*\.(c|cpp|h|hpp|cu|cuh)$
-        args: [-p=raspberry_pi/build]
-        stages: [pre-push]
-        pass_filenames: true
-      - id: mypy
-        name: mypy type checker
-        entry: uv run mypy
-        language: system
-        types: [python]
-        args:
-          [
-            --config-file=pyproject.toml,
-            --cache-dir=/tmp/mypy_cache,
-            --no-incremental,
-            --sqlite-cache,
-            --follow-imports=skip,
-            --exclude='/(\\.venv|site-packages)/|scripts/delimiter/export_onnx\\.py',
-            scripts/delimiter,
-          ]
-        stages: [pre-push]
-        pass_filenames: false
-
-  # Pre-push: Diff-based tests and jetson_pcm_receiver clang-tidy
-  # Only runs tests relevant to changed files
-  - repo: local
-    hooks:
-      - id: diff-based-tests
-        name: Run diff-based tests
-        entry: ./scripts/deployment/run_tests.sh
-        language: system
-        stages: [pre-push]
-        pass_filenames: false
-        exclude: ^third_party/
-        always_run: true
-      - id: vulkan-build-and-tests
-        name: Vulkan build & ctest (ENABLE_VULKAN=ON, CUDA=OFF)
-        # 重いので、関連コードが変更されたときだけ実行する（docs-only では走らせない）
-        files: ^(src/|include/|samples/|cmake/|CMakeLists\.txt$|.*\.(c|cpp|h|hpp|cu|cuh|cmake)$)
-        entry: |
-          bash -c '
-            set -euo pipefail
-            DEPS_SRC="${DEPS_SRC:-$(pwd)/build/_deps/nlohmann_json-src}"
-            if [ ! -d "${DEPS_SRC}/.git" ]; then
-              mkdir -p "$(dirname "${DEPS_SRC}")"
-              git clone --depth 1 --branch v3.11.3 https://github.com/nlohmann/json.git "${DEPS_SRC}"
-            fi
-            GTEST_SRC="${GTEST_SRC:-$(pwd)/build/_deps/googletest-src}"
-            if [ ! -d "${GTEST_SRC}/.git" ]; then
-              mkdir -p "$(dirname "${GTEST_SRC}")"
-              git clone --depth 1 --branch v1.14.0 https://github.com/google/googletest.git "${GTEST_SRC}"
-            fi
-            CPPZMQ_SRC="${CPPZMQ_SRC:-$(pwd)/build/_deps/cppzmq-src}"
-            if [ ! -d "${CPPZMQ_SRC}/.git" ]; then
-              mkdir -p "$(dirname "${CPPZMQ_SRC}")"
-              git clone --depth 1 --branch v4.10.0 https://github.com/zeromq/cppzmq.git "${CPPZMQ_SRC}"
-            fi
-            SPDLOG_SRC="${SPDLOG_SRC:-$(pwd)/build/_deps/spdlog-src}"
-            if [ ! -d "${SPDLOG_SRC}/.git" ]; then
-              mkdir -p "$(dirname "${SPDLOG_SRC}")"
-              git clone --depth 1 --branch v1.14.1 https://github.com/gabime/spdlog.git "${SPDLOG_SRC}"
-            fi
-            GLSLANG_SRC="${GLSLANG_SRC:-$(pwd)/build/_deps/glslang-src}"
-            if [ ! -d "${GLSLANG_SRC}/.git" ]; then
-              mkdir -p "$(dirname "${GLSLANG_SRC}")"
-              git clone --depth 1 --branch 12.3.1 https://github.com/KhronosGroup/glslang.git "${GLSLANG_SRC}"
-            fi
-            VKFFT_SRC="${VKFFT_SRC:-$(pwd)/build/_deps/vkfft-src}"
-            if [ ! -d "${VKFFT_SRC}/.git" ]; then
-              mkdir -p "$(dirname "${VKFFT_SRC}")"
-              git clone --depth 1 --branch v1.3.4 https://github.com/DTolm/VkFFT.git "${VKFFT_SRC}"
-            fi
-            "${CMAKE_BIN:-/usr/bin/cmake}" -S . -B build-vulkan \
-              -DENABLE_VULKAN=ON -DENABLE_CUDA=OFF -DDELIMITER_ENABLE_ORT=OFF \
-              -DFETCHCONTENT_SOURCE_DIR_VKFFT="${VKFFT_SRC}" \
-              -DFETCHCONTENT_SOURCE_DIR_GLSLANG="${GLSLANG_SRC}" \
-              -DFETCHCONTENT_SOURCE_DIR_SPDLOG="${SPDLOG_SRC}" \
-              -DFETCHCONTENT_SOURCE_DIR_CPPZMQ="${CPPZMQ_SRC}" \
-              -DFETCHCONTENT_SOURCE_DIR_GOOGLETEST="${GTEST_SRC}" \
-              -DFETCHCONTENT_SOURCE_DIR_NLOHMANN_JSON="${DEPS_SRC}" \
-              -DCMAKE_BUILD_TYPE=Release
-            "${CMAKE_BIN:-/usr/bin/cmake}" --build build-vulkan --parallel
-            /usr/bin/ctest --test-dir build-vulkan --output-on-failure --parallel 2
-          '
-        language: system
-        pass_filenames: false
-        stages: [pre-push]
-        exclude: ^third_party/
-      - id: clang-tidy-jetson-pcm
-        name: clang-tidy (jetson_pcm_receiver)
-        entry: clang-tidy
-        language: system
-        types_or: [c, c++]
-        files: ^jetson_pcm_receiver/.*\.(c|cpp|h|hpp|cu|cuh)$
-        args: [-p=jetson_pcm_receiver/build]
-        stages: [pre-push]
-        pass_filenames: true
-
-  # OpenAPI spec export (pre-commit, web/ changes only)
-  # Generates docs/api/openapi.json from FastAPI app
-  - repo: local
-    hooks:
-      - id: export-openapi
-        name: Export OpenAPI spec
-        entry: uv run python scripts/integration/export_openapi.py
-        language: system
-        files: ^web/.*\.py$
-        pass_filenames: false
-        stages: [pre-commit]
-      - id: export-raspi-openapi
-        name: Export Raspberry Pi OpenAPI spec
-        entry: uv run python scripts/integration/export_raspi_openapi.py
-        language: system
-        files: ^raspberry_pi/.*\.py$
-        pass_filenames: false
-        stages: [pre-commit]
+  # OpenAPI export hooks can be re-enabled when web/ is added.
