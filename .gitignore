@@ -1,0 +1,97 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+build-vulkan/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# uv
+.uv/
+.uv-cache/
+
+# aqua (local cache)
+.aqua/
+aqua-checksums.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Generated data (keep structure, ignore large binary files if needed)
+# data/coefficients/*.bin は512KBなので含める
+# plots は検証用なので含める
+
+# Test data (WAV files are large)
+test_data/*.wav
+test_data/output_*
+test_data/optimized_*
+
+# CMake build files
+build/
+build-cuda/
+build-*/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+*.cmake
+!CMakeLists.txt
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.log
+
+# Test output files
+test_detail.xml
+*_test_results.xml
+
+worktrees/
+
+# HUTUBS SOFA data (CC BY 4.0)
+# Track only the 5 required measured SOFA files for head sizes XS/S/M/L/XL
+# Exclude simulated files (~6MB each) - pattern: *_simulated.sofa
+data/crossfeed/raw/**/*_simulated.sofa
+.mypy_cache/
+
+# De-limiter weights
+data/delimiter/weights/**
+!data/delimiter/weights/README.md
+!data/delimiter/weights/manifest.json
+!data/delimiter/weights/LICENSE.upstream
+!data/delimiter/weights/.gitkeep
+!data/delimiter/weights/**/*.onnx
+!data/delimiter/weights/**/*.pth
+!data/delimiter/weights/**/*.json
+
+# Test audio files (large)
+data/delimiter/test/*.mp3
+data/delimiter/test/*.wav

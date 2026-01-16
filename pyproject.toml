@@ -1,0 +1,97 @@
+[project]
+name = "gpu-audio-upsampler"
+version = "0.1.0"
+description = "GPU-accelerated high-precision audio upsampling plugin"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Totton Audio Project NCL v1.1" }
+license-files = ["LICENSE", "LICENSE.ja.md", "NOTICE.md", "THIRD_PARTY_LICENSES.md"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: Other/Proprietary License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Multimedia :: Sound/Audio",
+]
+dependencies = [
+    "scipy>=1.11.0",
+    "numpy>=1.24.0",
+    "matplotlib>=3.7.0",
+    "soundfile>=0.12.0",
+    "fastapi>=0.109.0",
+    "uvicorn>=0.27.0",
+    "python-multipart>=0.0.6",
+    "pyzmq>=25.0.0",
+    "pysofaconventions>=0.1.5",
+    "jinja2>=3.1.0",
+]
+
+[project.optional-dependencies]
+gpu = [
+    "cupy-cuda12x>=13.0.0",  # GPU高速化（NVIDIA CUDA 12.x向け）
+]
+delimiter = [
+    # Offline De-limiter PoC (#1008)
+    "torch>=2.5.0",
+    "torchaudio>=2.5.0",
+    "librosa>=0.10.2.post1",
+    "onnx>=1.16.0",
+    "pyloudnorm>=0.1.1",
+    "asteroid>=0.7.0",
+    "asteroid-filterbanks>=0.4.0",
+    "einops>=0.8.0",
+]
+onnxruntime = [
+    # ONNX Runtime CPU backend baseline (#1017)
+    "onnxruntime>=1.20.0",
+]
+onnxruntime-gpu = [
+    # ONNX Runtime GPU package (CUDA/TensorRT EP) (#1017)
+    "onnxruntime-gpu>=1.20.0",
+]
+benchmark = [
+    # Streaming benchmark resource sampling (#1015)
+    "psutil>=6.1.0",
+    "nvidia-ml-py3>=7.352.0",
+]
+
+[dependency-groups]
+dev = [
+    "pre-commit>=3.8.0",
+    "ruff>=0.6.9",
+    "pytest>=8.0.0",
+    "pytest-cov>=4.1.0",
+    "detect-secrets>=1.5.0",
+    "mypy>=1.13.0",
+    "httpx>=0.27.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests/python"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+
+[tool.coverage.run]
+source = ["scripts"]
+omit = ["tests/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+]
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
+no_strict_optional = true
+warn_return_any = false
+warn_unused_ignores = true
+show_error_codes = true
+explicit_package_bases = true
+# Start with relaxed settings, gradually tighten
+check_untyped_defs = false
+disallow_untyped_defs = false
