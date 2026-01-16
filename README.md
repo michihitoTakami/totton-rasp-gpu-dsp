@@ -1,76 +1,87 @@
 # Totton Raspberry Pi GPU DSP
 
-Pi 単体で動く最小構成の GPU アップサンプラ（Vulkan + EQ + FastAPI + Jinja2 UI）を `totton audio project` から切り出し、Raspberry Pi ユーザー向けにシンプルで再利用しやすい形にしたリポジトリです。Vulkan (VkFFT) による FIR 畳み込みアップサンプリング、OPRA 系 EQ、ZeroMQ 制御、基本的な Web UI/API/管理用スクリプトを統合します。
+## English
 
-This repository is the minimalist GPU upsampler migration from `totton audio project`, centered on Vulkan + EQ + FastAPI + Jinja2 UI operability on Raspberry Pi hardware. It combines Vulkan (VkFFT) convolution upsampling, OPRA-style EQ, ZeroMQ control, and the basic Web UI/API scaffolding for easy reuse.
+This repository hosts the minimal GPU upsampler that migrates Vulkan+EQ+FastAPI/Jinja2 UI from `totton audio project` into a Raspberry Pi-friendly package. It pairs Vulkan (VkFFT) FIR convolution upsampling with OPRA-style EQ, ZeroMQ control, a lightweight Web UI/API, and scripts so the solution is easy to re-use on Pi hardware.
 
-## 特徴 / Features
-- Vulkan + VkFFT による FIR 畳み込みアップサンプリング
-- OPRA 形式に基づいた EQ 定義と FastAPI/Jinja2 ベースの設定 UI/API
-- ZeroMQ での RELOAD/STATUS など最小の制御コマンド
-- Web UI で EQ 適用・基本設定変更 → サーバ側に即時反映するワークフロー
-- フィルタを同梱し、Pi 上でコンパイル不要で起動できるリリースを想定
-- Issue [#1](https://github.com/michihitoTakami/totton-rasp-gpu-dsp/issues/1) に記載された EPIC の範囲・完了条件に準拠
-
+### Features
 - Vulkan + VkFFT based FIR convolution upsampling
 - OPRA-style EQ definitions with FastAPI/Jinja2 UI/API
-- Minimal ZeroMQ control surface covering RELOAD/STATUS
-- Web UI workflow that applies EQ and config changes live on the server
-- Bundled filters and configurations to run on Pi without rebuilding
-- Aligns with the EPIC scope and completion criteria listed in Issue [#1](https://github.com/michihitoTakami/totton-rasp-gpu-dsp/issues/1)
+- Minimal ZeroMQ control surface for RELOAD/STATUS
+- Web UI workflow that applies EQ and configuration changes live on the server
+- Bundled filters and configuration to run on Pi without rebuilding
+- Aligns with the EPIC scope and completion criteria described in Issue [#1](https://github.com/michihitoTakami/totton-rasp-gpu-dsp/issues/1)
 
-## セットアップの概要 / Setup Overview
-1. `uv sync` で Python/C++/Vulkan 関連依存を整理（`uv.lock` を再利用）
-2. `uv run python scripts/filters/generate_minimum_phase.py` などでフィルタを生成（必要に応じて）
-3. `.pre-commit-config.yaml` を使って `pre-commit run --all-files` を実行
-4. `aqua.yaml` を使い Aqua CLI で lint/format を統一
-
-1. Use `uv sync` to gather Python/C++/Vulkan dependencies (reusing `uv.lock`).
+### Setup overview
+1. Run `uv sync` to gather Python/C++/Vulkan dependencies (reusing `uv.lock`).
 2. Generate filters via `uv run python scripts/filters/generate_minimum_phase.py` if required.
-3. Run `pre-commit run --all-files` with the provided `.pre-commit-config.yaml`.
-4. Leverage `aqua.yaml` to keep lint/format tooling consistent through Aqua CLI.
+3. Run `pre-commit run --all-files` using the provided `.pre-commit-config.yaml`.
+4. Use `aqua.yaml` to keep lint/format tooling consistent via Aqua CLI.
 
-## 期待する成果 / Expected Outcomes
-- Pi (arm64) リリースにバイナリ＋フィルタ＋設定例をバンドル
-- UI と ZeroMQ API 双方から EQ 適用/設定変更/RELOAD などが可能
-- `docs/` や `scripts/` に実装骨格を置き、開発者が手を入れやすくする
-
+### Expected outcomes
 - Bundle binaries, filters, and configuration examples into the Pi (arm64) release
-- Enable EQ application, config tweaks, and RELOAD via both the UI and ZeroMQ API
-- Seed `docs/` and `scripts/` with scaffolding to help contributors understand the system
+- Enable EQ application, config tweaks, and RELOAD via both the UI and the ZeroMQ API
+- Seed `docs/` and `scripts/` with scaffolding so contributors can understand the system quickly
 
-## ディレクトリ構成案 / Directory Layout
-```
-src/       : Vulkan/C++/ZeroMQ/ALSA などの実装
-include/   : 共通ヘッダ
-scripts/   : フィルタ生成・デプロイスクリプト
-data/      : FIR フィルタや EQ プロファイル
-docs/      : インストール/仕様/チュートリアル
-web/       : FastAPI + Jinja2 テンプレート (btn_primary 等の再利用必須)
-build/     : ビルドアウトプット
-```
+### Directory layout
 ```
 src/       : Implementations for Vulkan/C++/ZeroMQ/ALSA
 include/   : Shared headers
 scripts/   : Filter generation and deployment scripts
 data/      : FIR filters and EQ profiles
 docs/      : Installation, specs, and tutorials
-web/       : FastAPI + Jinja2 templates (reusing macros like btn_primary)
+web/       : FastAPI + Jinja2 templates (reusing macros such as btn_primary)
 build/     : Build artifacts
 ```
 
-## 参照と今後の流れ / References & Next Steps
-- [Issue #1](https://github.com/michihitoTakami/totton-rasp-gpu-dsp/issues/1) にある EPIC の目的・完了条件を達成すること
-- まずは `Vulkan upsampler コア (#2)`、`EQ (#5)`、`FastAPI UI/API (#6)` などの子 Issue を埋めていく
-
+### References & next steps
 - Deliver on the goals/completion criteria defined in [Issue #1](https://github.com/michihitoTakami/totton-rasp-gpu-dsp/issues/1).
 - Start filling the child issues such as `Vulkan upsampler core (#2)`, `EQ (#5)`, `FastAPI UI/API (#6)`, etc.
 
-## コントリビューション / Contribution
-- GitHub CLI `gh` で Issue/PR を操作
-- ブランチ名には Issue 番号を含める（例: `feature/#1-minimal-upscaler`）
-- `pre-commit run --hook-stage pre-push` を常に通す
-
+### Contribution
 - Use GitHub CLI `gh` for Issue/PR workflows
 - Include the Issue number in branch names (e.g., `feature/#1-minimal-upscaler`)
 - Always run `pre-commit run --hook-stage pre-push`
+
+## 日本語
+
+このリポジトリは `totton audio project` から Vulkan+EQ+FastAPI/Jinja2 UI を切り出し、Raspberry Pi 向けに再構成した最小 GPU アップサンプラです。Vulkan (VkFFT) による FIR 畳み込みアップサンプリング、OPRA 系 EQ、ZeroMQ 制御、軽量な Web UI/API、運用スクリプトを組み合わせて、Pi 上で手早く再利用できる構成を目指しています。
+
+### 特徴
+- Vulkan + VkFFT による FIR 畳み込みアップサンプリング
+- OPRA 形式に基づいた EQ 定義と FastAPI/Jinja2 ベースの UI/API
+- RELOAD/STATUS を扱う ZeroMQ の最小制御
+- EQ と設定変更を即時に反映する Web UI ワークフロー
+- Pi 上で再ビルド不要なフィルタと設定の同梱
+- Issue [#1](https://github.com/michihitoTakami/totton-rasp-gpu-dsp/issues/1) に記された EPIC の完了条件に準拠
+
+### セットアップの概要
+1. `uv sync` で Python/C++/Vulkan 関連依存を整理（`uv.lock` を再利用）
+2. 必要に応じて `uv run python scripts/filters/generate_minimum_phase.py` などでフィルタを生成
+3. `.pre-commit-config.yaml` で `pre-commit run --all-files` を実行
+4. `aqua.yaml` を使って Aqua CLI で lint/format を統一
+
+### 期待する成果
+- Pi (arm64) 向けリリースにバイナリ・フィルタ・設定例を添付
+- UI と ZeroMQ API 双方から EQ 適用/設定変更/RELOAD が実行可能
+- `docs/` や `scripts/` に実装の骨格を置き、開発者が理解しやすくする
+
+### ディレクトリ構成案
+```
+src/       : Vulkan/C++/ZeroMQ/ALSA などの実装
+include/   : 共通ヘッダ
+scripts/   : フィルタ生成・デプロイスクリプト
+data/      : FIR フィルタや EQ プロファイル
+docs/      : インストール/仕様/チュートリアル
+web/       : FastAPI + Jinja2 テンプレート（btn_primary 等の再利用必須）
+build/     : ビルドアウトプット
+```
+
+### 参照と今後の流れ
+- [Issue #1](https://github.com/michihitoTakami/totton-rasp-gpu-dsp/issues/1) に書かれた EPIC の目的と完了条件を満たす
+- `Vulkan upsampler コア (#2)`、`EQ (#5)`、`FastAPI UI/API (#6)` などの子 Issue を順次埋めていく
+
+### コントリビューション
+- GitHub CLI `gh` で Issue/PR 操作
+- ブランチ名には Issue 番号を含める（例: `feature/#1-minimal-upscaler`）
+- `pre-commit run --hook-stage pre-push` を常に通す
