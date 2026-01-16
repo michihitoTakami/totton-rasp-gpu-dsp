@@ -4,9 +4,9 @@
 #include <cctype>
 #include <filesystem>
 #include <fstream>
-#include <system_error>
 #include <sstream>
 #include <string>
+#include <system_error>
 
 #include "fft_utils.h"
 
@@ -227,8 +227,7 @@ bool VulkanStreamingUpsampler::LoadFilterConfig(const std::string &jsonPath,
 bool VulkanStreamingUpsampler::LoadCoefficients(const FilterConfig &config,
                                                 std::string *errorMessage) {
   std::error_code ec;
-  const auto fileSize =
-      std::filesystem::file_size(config.coefficientsPath, ec);
+  const auto fileSize = std::filesystem::file_size(config.coefficientsPath, ec);
   if (ec) {
     if (errorMessage) {
       *errorMessage =
