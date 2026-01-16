@@ -195,6 +195,14 @@ bool VulkanStreamingUpsampler::LoadFilterConfig(const std::string &jsonPath,
     }
     return false;
   }
+  const std::size_t overlapSize = fftSize - blockSize;
+  if (taps == 0 || overlapSize != (taps - 1)) {
+    if (errorMessage) {
+      *errorMessage =
+          "block_size must satisfy fft_size - block_size == taps - 1";
+    }
+    return false;
+  }
 
   std::filesystem::path bin = binPath;
   if (!bin.is_absolute()) {

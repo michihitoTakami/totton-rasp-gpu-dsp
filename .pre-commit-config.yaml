@@ -40,6 +40,14 @@ repos:
         pass_filenames: false
         stages: [pre-push]
         always_run: true
+      - id: diff-based-tests
+        name: Run diff-based tests
+        entry: ./scripts/deployment/run_tests.sh
+        language: system
+        stages: [pre-push]
+        pass_filenames: false
+        exclude: ^third_party/
+        always_run: true
 
   # clang-format for C/C++/CUDA formatting
   - repo: https://github.com/pre-commit/mirrors-clang-format
