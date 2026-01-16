@@ -53,7 +53,9 @@ endif()
 if(ENABLE_ALSA)
     find_package(ALSA REQUIRED)
     add_executable(alsa_streamer
-        src/alsa/alsa_streamer.cpp
+        src/alsa/alsa_common.cpp
+        src/alsa/alsa_filter_selector.cpp
+        src/alsa/alsa_streamer_main.cpp
     )
     target_link_libraries(alsa_streamer PRIVATE vulkan_upsampler ALSA::ALSA)
 endif()
