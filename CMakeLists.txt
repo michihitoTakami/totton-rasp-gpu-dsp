@@ -27,6 +27,11 @@ target_link_libraries(upsampler_smoke PRIVATE vulkan_upsampler)
 add_test(NAME upsampler_smoke COMMAND upsampler_smoke)
 
 if(ENABLE_VULKAN)
+    target_compile_definitions(upsampler_smoke PRIVATE ENABLE_VULKAN=1)
+    target_link_libraries(upsampler_smoke PRIVATE Vulkan::Vulkan)
+endif()
+
+if(ENABLE_VULKAN)
     find_package(Vulkan REQUIRED)
     target_compile_definitions(vulkan_upsampler PRIVATE ENABLE_VULKAN=1)
     target_link_libraries(vulkan_upsampler PRIVATE Vulkan::Vulkan)

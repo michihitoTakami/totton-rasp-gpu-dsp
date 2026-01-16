@@ -10,7 +10,34 @@
 #include <unistd.h>
 #include <vector>
 
+#if defined(ENABLE_VULKAN)
+#include <vulkan/vulkan.h>
+#endif
+
 namespace {
+
+#if defined(ENABLE_VULKAN)
+bool HasVulkanDevice() {
+  VkInstance instance = VK_NULL_HANDLE;
+  VkApplicationInfo appInfo{};
+  appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+  appInfo.pApplicationName = "totton_vulkan_upsampler_test";
+  appInfo.apiVersion = VK_API_VERSION_1_1;
+
+  VkInstanceCreateInfo createInfo{};
+  createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+  createInfo.pApplicationInfo = &appInfo;
+
+  if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS) {
+    return false;
+  }
+
+  uint32_t deviceCount = 0;
+  VkResult res = vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
+  vkDestroyInstance(instance, nullptr);
+  return res == VK_SUCCESS && deviceCount > 0;
+}
+#endif
 
 std::filesystem::path WriteTempFilter(const std::filesystem::path &dir) {
   std::filesystem::create_directories(dir);
@@ -68,6 +95,12 @@ bool CheckVectorNear(const std::vector<float> &actual,
 } // namespace
 
 int main() {
+#if defined(ENABLE_VULKAN)
+  if (!HasVulkanDevice()) {
+    std::cout << "No Vulkan device available, skipping GPU validation.\n";
+    return 0;
+  }
+#endif
   const auto stamp =
       std::chrono::steady_clock::now().time_since_epoch().count();
   const auto tempDir = std::filesystem::temp_directory_path() /
