@@ -3,6 +3,7 @@ project(totton_rasp_gpu_dsp LANGUAGES CXX)
 
 option(ENABLE_VULKAN "Enable Vulkan upsampler" ON)
 option(USE_VKFFT "Use VkFFT backend when Vulkan is enabled" ON)
+option(ENABLE_ALSA "Enable ALSA streaming app" ON)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -47,4 +48,12 @@ add_test(NAME upsampler_smoke COMMAND upsampler_smoke)
 if(ENABLE_VULKAN)
     target_compile_definitions(upsampler_smoke PRIVATE ENABLE_VULKAN=1)
     target_link_libraries(upsampler_smoke PRIVATE Vulkan::Vulkan)
+endif()
+
+if(ENABLE_ALSA)
+    find_package(ALSA REQUIRED)
+    add_executable(alsa_streamer
+        src/alsa/alsa_streamer.cpp
+    )
+    target_link_libraries(alsa_streamer PRIVATE vulkan_upsampler ALSA::ALSA)
 endif()

@@ -24,6 +24,12 @@ This repository hosts the minimal GPU upsampler that migrates Vulkan+EQ+FastAPI/
 - Enable EQ application, config tweaks, and RELOAD via both the UI and the ZeroMQ API
 - Seed `docs/` and `scripts/` with scaffolding so contributors can understand the system quickly
 
+### ALSA streaming (Issue #3)
+- Build: `cmake -B build -DENABLE_ALSA=ON` then `cmake --build build -j$(nproc)`
+- Run (minimal): `./build/alsa_streamer --in hw:0 --out hw:0`
+- Run with filter: `./build/alsa_streamer --in hw:0 --out hw:0 --filter data/coefficients/filter_44k_1x_2m_min_phase.json`
+- XRUN handling: logs the XRUN and calls `snd_pcm_recover` to continue streaming; if recovery fails the app exits
+
 ### Directory layout
 ```
 src/       : Implementations for Vulkan/C++/ZeroMQ/ALSA
@@ -68,6 +74,12 @@ build/     : Build artifacts
 - Pi (arm64) 向けリリースにバイナリ・フィルタ・設定例を添付
 - UI と ZeroMQ API 双方から EQ 適用/設定変更/RELOAD が実行可能
 - `docs/` や `scripts/` に実装の骨格を置き、開発者が理解しやすくする
+
+### ALSA ストリーミング (Issue #3)
+- ビルド: `cmake -B build -DENABLE_ALSA=ON` → `cmake --build build -j$(nproc)`
+- 起動（最小）: `./build/alsa_streamer --in hw:0 --out hw:0`
+- フィルタ指定: `./build/alsa_streamer --in hw:0 --out hw:0 --filter data/coefficients/filter_44k_1x_2m_min_phase.json`
+- XRUN 対応: XRUN をログに出し、`snd_pcm_recover` で継続。復帰不能なら終了
 
 ### ディレクトリ構成案
 ```
