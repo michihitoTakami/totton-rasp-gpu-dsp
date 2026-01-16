@@ -575,8 +575,8 @@ int main(int argc, char **argv) {
 
     if (inputRate == 0) {
       auto preview = OpenCaptureAutoRate(
-          options.inputDevice, format, options.channels,
-          options.requestedRate, options.periodFrames, options.bufferFrames);
+          options.inputDevice, format, options.channels, options.requestedRate,
+          options.periodFrames, options.bufferFrames);
       if (!preview) {
         return 1;
       }
