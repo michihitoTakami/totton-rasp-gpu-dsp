@@ -42,8 +42,8 @@ int main() {
   }
 
   auto autoPath = WriteDummyFilter(tempDir, "filter_44k_2x_2m_min_phase.json");
-  auto autoSelection = totton::alsa::ResolveFilterPath(
-      "", tempDir.string(), "min", 2, 44100, &error);
+  auto autoSelection = totton::alsa::ResolveFilterPath("", tempDir.string(),
+                                                       "min", 2, 44100, &error);
   if (!Expect(autoSelection.has_value(), "auto selection")) {
     return 1;
   }
@@ -53,8 +53,8 @@ int main() {
   }
 
   error.clear();
-  auto invalid = totton::alsa::ResolveFilterPath(
-      "", tempDir.string(), "min", 2, 32000, &error);
+  auto invalid = totton::alsa::ResolveFilterPath("", tempDir.string(), "min", 2,
+                                                 32000, &error);
   if (!Expect(!invalid.has_value(), "invalid family")) {
     return 1;
   }

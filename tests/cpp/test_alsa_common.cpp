@@ -24,16 +24,14 @@ bool TestFormatParsing() {
   using totton::alsa::BytesPerSample;
   using totton::alsa::ParseFormat;
 
-  if (!Expect(ParseFormat("s16") == SND_PCM_FORMAT_S16_LE,
-              "ParseFormat s16")) {
+  if (!Expect(ParseFormat("s16") == SND_PCM_FORMAT_S16_LE, "ParseFormat s16")) {
     return false;
   }
   if (!Expect(ParseFormat("s24") == SND_PCM_FORMAT_S24_3LE,
               "ParseFormat s24")) {
     return false;
   }
-  if (!Expect(ParseFormat("s32") == SND_PCM_FORMAT_S32_LE,
-              "ParseFormat s32")) {
+  if (!Expect(ParseFormat("s32") == SND_PCM_FORMAT_S32_LE, "ParseFormat s32")) {
     return false;
   }
   if (!Expect(ParseFormat("bogus") == SND_PCM_FORMAT_UNKNOWN,
@@ -76,8 +74,8 @@ bool TestConversions(snd_pcm_format_t format, float eps) {
   }
   for (size_t i = 0; i < input.size(); ++i) {
     if (!AlmostEqual(input[i], output[i], eps)) {
-      std::cerr << "FAIL: conversion mismatch at " << i << " got "
-                << output[i] << " expected " << input[i] << "\n";
+      std::cerr << "FAIL: conversion mismatch at " << i << " got " << output[i]
+                << " expected " << input[i] << "\n";
       return false;
     }
   }
@@ -95,10 +93,9 @@ bool TestAlsaNullDevice() {
     return false;
   }
 
-  auto playback = totton::alsa::OpenPcm("null", SND_PCM_STREAM_PLAYBACK,
-                                       SND_PCM_FORMAT_S32_LE, kChannels,
-                                       capture->rate, capture->periodFrames,
-                                       0);
+  auto playback = totton::alsa::OpenPcm(
+      "null", SND_PCM_STREAM_PLAYBACK, SND_PCM_FORMAT_S32_LE, kChannels,
+      capture->rate, capture->periodFrames, 0);
   if (!Expect(playback.has_value(), "OpenPcm null")) {
     return false;
   }
