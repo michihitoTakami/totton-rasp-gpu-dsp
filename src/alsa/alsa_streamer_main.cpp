@@ -169,11 +169,11 @@ bool ParseArgs(int argc, char **argv, CliOptions *options) {
   return true;
 }
 
-bool PrepareFilter(const CliOptions &options, snd_pcm_format_t format,
-                   totton::vulkan::VulkanStreamingUpsampler *upsampler,
-                   std::vector<totton::vulkan::VulkanStreamingUpsampler>
-                       *channelUpsamplers,
-                   std::optional<totton::vulkan::FilterConfig> *filterConfig) {
+bool PrepareFilter(
+    const CliOptions &options, snd_pcm_format_t format,
+    totton::vulkan::VulkanStreamingUpsampler *upsampler,
+    std::vector<totton::vulkan::VulkanStreamingUpsampler> *channelUpsamplers,
+    std::optional<totton::vulkan::FilterConfig> *filterConfig) {
   const bool filterRequired = !options.filterPath.empty();
   const bool autoFilterRequested =
       options.filterDirSpecified || !options.filterPath.empty();
@@ -261,8 +261,7 @@ int main(int argc, char **argv) {
     return 1;
   }
   if (filterConfig) {
-    options.periodFrames =
-        static_cast<unsigned int>(filterConfig->blockSize);
+    options.periodFrames = static_cast<unsigned int>(filterConfig->blockSize);
   }
 
   unsigned int periodFrames = options.periodFrames;

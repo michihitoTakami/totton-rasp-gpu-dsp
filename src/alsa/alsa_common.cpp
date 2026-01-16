@@ -11,8 +11,9 @@ namespace totton::alsa {
 
 snd_pcm_format_t ParseFormat(const std::string &format) {
   std::string lower = format;
-  std::transform(lower.begin(), lower.end(), lower.begin(),
-                 [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+  std::transform(
+      lower.begin(), lower.end(), lower.begin(),
+      [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
   if (lower == "s16" || lower == "s16_le") {
     return SND_PCM_FORMAT_S16_LE;
   }
@@ -129,15 +130,14 @@ bool ConfigurePcm(snd_pcm_t *handle, snd_pcm_format_t format,
                   unsigned int channels, unsigned int rate,
                   snd_pcm_uframes_t requestedPeriod,
                   snd_pcm_uframes_t requestedBuffer,
-                  snd_pcm_uframes_t *periodOut,
-                  snd_pcm_uframes_t *bufferOut, unsigned int *rateOut,
-                  bool playback) {
+                  snd_pcm_uframes_t *periodOut, snd_pcm_uframes_t *bufferOut,
+                  unsigned int *rateOut, bool playback) {
   snd_pcm_hw_params_t *hwParams;
   snd_pcm_hw_params_alloca(&hwParams);
   snd_pcm_hw_params_any(handle, hwParams);
 
   int err = snd_pcm_hw_params_set_access(handle, hwParams,
-                                        SND_PCM_ACCESS_RW_INTERLEAVED);
+                                         SND_PCM_ACCESS_RW_INTERLEAVED);
   if (err < 0) {
     std::cerr << "ALSA: Cannot set access: " << snd_strerror(err) << "\n";
     return false;
@@ -216,12 +216,10 @@ bool ConfigurePcm(snd_pcm_t *handle, snd_pcm_format_t format,
   return true;
 }
 
-std::optional<AlsaHandle> OpenPcm(const std::string &device,
-                                 snd_pcm_stream_t stream,
-                                 snd_pcm_format_t format,
-                                 unsigned int channels, unsigned int rate,
-                                 snd_pcm_uframes_t period,
-                                 snd_pcm_uframes_t buffer) {
+std::optional<AlsaHandle>
+OpenPcm(const std::string &device, snd_pcm_stream_t stream,
+        snd_pcm_format_t format, unsigned int channels, unsigned int rate,
+        snd_pcm_uframes_t period, snd_pcm_uframes_t buffer) {
   snd_pcm_t *handle = nullptr;
   int err = snd_pcm_open(&handle, device.c_str(), stream, 0);
   if (err < 0) {
@@ -242,16 +240,16 @@ std::optional<AlsaHandle> OpenPcm(const std::string &device,
   return result;
 }
 
-std::optional<AlsaHandle> OpenCaptureAutoRate(
-    const std::string &device, snd_pcm_format_t format, unsigned int channels,
-    unsigned int requestedRate, snd_pcm_uframes_t period,
-    snd_pcm_uframes_t buffer) {
+std::optional<AlsaHandle>
+OpenCaptureAutoRate(const std::string &device, snd_pcm_format_t format,
+                    unsigned int channels, unsigned int requestedRate,
+                    snd_pcm_uframes_t period, snd_pcm_uframes_t buffer) {
   if (requestedRate != 0) {
     return OpenPcm(device, SND_PCM_STREAM_CAPTURE, format, channels,
                    requestedRate, period, buffer);
   }
 
-  const unsigned int candidates[] = {44100, 48000, 88200,
+  const unsigned int candidates[] = {44100, 48000,  88200,
                                      96000, 176400, 192000};
   for (unsigned int candidate : candidates) {
     auto handle = OpenPcm(device, SND_PCM_STREAM_CAPTURE, format, channels,

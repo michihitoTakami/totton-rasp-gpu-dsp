@@ -5,10 +5,10 @@
 
 namespace totton::alsa {
 
-std::optional<FilterSelection> ResolveFilterPath(
-    const std::string &filterPath, const std::string &filterDir,
-    const std::string &phase, unsigned int ratio, unsigned int inputRate,
-    std::string *errorMessage) {
+std::optional<FilterSelection>
+ResolveFilterPath(const std::string &filterPath, const std::string &filterDir,
+                  const std::string &phase, unsigned int ratio,
+                  unsigned int inputRate, std::string *errorMessage) {
   if (!filterPath.empty()) {
     if (!std::filesystem::exists(filterPath)) {
       if (errorMessage) {
@@ -30,8 +30,8 @@ std::optional<FilterSelection> ResolveFilterPath(
     family = 48;
   } else {
     if (errorMessage) {
-      *errorMessage = "Unsupported input rate family: " +
-                      std::to_string(inputRate);
+      *errorMessage =
+          "Unsupported input rate family: " + std::to_string(inputRate);
     }
     return std::nullopt;
   }

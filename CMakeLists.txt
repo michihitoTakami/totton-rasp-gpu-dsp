@@ -57,5 +57,6 @@ if(ENABLE_ALSA)
         src/alsa/alsa_filter_selector.cpp
         src/alsa/alsa_streamer_main.cpp
     )
+    target_include_directories(alsa_streamer PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
     target_link_libraries(alsa_streamer PRIVATE vulkan_upsampler ALSA::ALSA)
 endif()

@@ -2,6 +2,7 @@
 
 #include <alsa/asoundlib.h>
 
+#include <atomic>
 #include <optional>
 #include <string>
 #include <vector>
@@ -27,21 +28,18 @@ bool ConfigurePcm(snd_pcm_t *handle, snd_pcm_format_t format,
                   unsigned int channels, unsigned int rate,
                   snd_pcm_uframes_t requestedPeriod,
                   snd_pcm_uframes_t requestedBuffer,
-                  snd_pcm_uframes_t *periodOut,
-                  snd_pcm_uframes_t *bufferOut, unsigned int *rateOut,
-                  bool playback);
+                  snd_pcm_uframes_t *periodOut, snd_pcm_uframes_t *bufferOut,
+                  unsigned int *rateOut, bool playback);
 
-std::optional<AlsaHandle> OpenPcm(const std::string &device,
-                                 snd_pcm_stream_t stream,
-                                 snd_pcm_format_t format,
-                                 unsigned int channels, unsigned int rate,
-                                 snd_pcm_uframes_t period,
-                                 snd_pcm_uframes_t buffer);
+std::optional<AlsaHandle>
+OpenPcm(const std::string &device, snd_pcm_stream_t stream,
+        snd_pcm_format_t format, unsigned int channels, unsigned int rate,
+        snd_pcm_uframes_t period, snd_pcm_uframes_t buffer);
 
-std::optional<AlsaHandle> OpenCaptureAutoRate(
-    const std::string &device, snd_pcm_format_t format, unsigned int channels,
-    unsigned int requestedRate, snd_pcm_uframes_t period,
-    snd_pcm_uframes_t buffer);
+std::optional<AlsaHandle>
+OpenCaptureAutoRate(const std::string &device, snd_pcm_format_t format,
+                    unsigned int channels, unsigned int requestedRate,
+                    snd_pcm_uframes_t period, snd_pcm_uframes_t buffer);
 
 bool RecoverPcm(snd_pcm_t *handle, int err, const char *label);
 bool ReadFull(snd_pcm_t *handle, void *buffer, snd_pcm_uframes_t frames,
