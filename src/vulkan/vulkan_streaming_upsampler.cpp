@@ -4,6 +4,7 @@
 #include <cctype>
 #include <filesystem>
 #include <fstream>
+#include <system_error>
 #include <sstream>
 #include <string>
 
@@ -104,6 +105,9 @@ bool VulkanStreamingUpsampler::LoadFilter(const std::string &jsonPath,
 std::vector<float> VulkanStreamingUpsampler::ProcessBlock(const float *input,
                                                           std::size_t count) {
   if (!initialized_ || !input) {
+    return {};
+  }
+  if (count == 0 || count != config_.blockSize) {
     return {};
   }
 
@@ -222,6 +226,17 @@ bool VulkanStreamingUpsampler::LoadFilterConfig(const std::string &jsonPath,
 
 bool VulkanStreamingUpsampler::LoadCoefficients(const FilterConfig &config,
                                                 std::string *errorMessage) {
+  std::error_code ec;
+  const auto fileSize =
+      std::filesystem::file_size(config.coefficientsPath, ec);
+  if (ec) {
+    if (errorMessage) {
+      *errorMessage =
+          BuildError("Failed to stat coefficients", config.coefficientsPath);
+    }
+    return false;
+  }
+
   std::ifstream file(config.coefficientsPath, std::ios::binary);
   if (!file) {
     if (errorMessage) {
@@ -232,6 +247,12 @@ bool VulkanStreamingUpsampler::LoadCoefficients(const FilterConfig &config,
   }
 
   const std::size_t expectedBytes = config.taps * sizeof(float);
+  if (fileSize != expectedBytes) {
+    if (errorMessage) {
+      *errorMessage = "Coefficient file size does not match taps";
+    }
+    return false;
+  }
   std::vector<float> coefficients(config.taps, 0.0f);
   file.read(reinterpret_cast<char *>(coefficients.data()),
             static_cast<std::streamsize>(expectedBytes));
