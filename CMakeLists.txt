@@ -18,6 +18,14 @@ target_include_directories(vulkan_upsampler
 
 target_compile_features(vulkan_upsampler PUBLIC cxx_std_17)
 
+enable_testing()
+
+add_executable(upsampler_smoke
+    tests/cpp/test_vulkan_upsampler.cpp
+)
+target_link_libraries(upsampler_smoke PRIVATE vulkan_upsampler)
+add_test(NAME upsampler_smoke COMMAND upsampler_smoke)
+
 if(ENABLE_VULKAN)
     find_package(Vulkan REQUIRED)
     target_compile_definitions(vulkan_upsampler PRIVATE ENABLE_VULKAN=1)
