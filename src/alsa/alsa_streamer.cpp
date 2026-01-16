@@ -2,9 +2,9 @@
 
 #include <algorithm>
 #include <atomic>
-#include <cstdint>
 #include <cctype>
 #include <csignal>
+#include <cstdint>
 #include <cstring>
 #include <iostream>
 #include <optional>
@@ -43,17 +43,21 @@ void SignalHandler(int) { gRunning.store(false); }
 
 void PrintUsage(const char *argv0) {
   std::cout
-      << "Usage: " << argv0
-      << " --in <device> --out <device> [options]\n\n"
+      << "Usage: " << argv0 << " --in <device> --out <device> [options]\n\n"
       << "Options:\n"
       << "  --filter <path>         Filter JSON path (docs/filter_format.md)\n"
-      << "  --filter-dir <path>     Filter directory (default: data/coefficients)\n"
-      << "  --phase <min|linear>    Filter phase suffix for auto lookup (default: min)\n"
-      << "  --ratio <1|2|4|8|16>     Upsample ratio suffix for auto lookup (default: 1)\n"
-      << "  --rate <hz>             Requested input sample rate (auto if omitted)\n"
+      << "  --filter-dir <path>     Filter directory (default: "
+         "data/coefficients)\n"
+      << "  --phase <min|linear>    Filter phase suffix for auto lookup "
+         "(default: min)\n"
+      << "  --ratio <1|2|4|8|16>     Upsample ratio suffix for auto lookup "
+         "(default: 1)\n"
+      << "  --rate <hz>             Requested input sample rate (auto if "
+         "omitted)\n"
       << "  --channels <n>          Channel count (default: 2)\n"
       << "  --format <s16|s24|s32>  PCM format (default: s32)\n"
-      << "  --period <frames>       ALSA period frames (default: filter block size)\n"
+      << "  --period <frames>       ALSA period frames (default: filter block "
+         "size)\n"
       << "  --buffer <frames>       ALSA buffer frames (default: period*4)\n"
       << "  --help                  Show this help\n";
 }
@@ -174,8 +178,9 @@ bool ParseArgs(int argc, char **argv, CliOptions *options) {
 
 snd_pcm_format_t ParseFormat(const std::string &format) {
   std::string lower = format;
-  std::transform(lower.begin(), lower.end(), lower.begin(),
-                 [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+  std::transform(
+      lower.begin(), lower.end(), lower.begin(),
+      [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
   if (lower == "s16" || lower == "s16_le") {
     return SND_PCM_FORMAT_S16_LE;
   }
@@ -292,15 +297,14 @@ bool ConfigurePcm(snd_pcm_t *handle, snd_pcm_format_t format,
                   unsigned int channels, unsigned int rate,
                   snd_pcm_uframes_t requestedPeriod,
                   snd_pcm_uframes_t requestedBuffer,
-                  snd_pcm_uframes_t *periodOut,
-                  snd_pcm_uframes_t *bufferOut, unsigned int *rateOut,
-                  bool playback) {
+                  snd_pcm_uframes_t *periodOut, snd_pcm_uframes_t *bufferOut,
+                  unsigned int *rateOut, bool playback) {
   snd_pcm_hw_params_t *hwParams;
   snd_pcm_hw_params_alloca(&hwParams);
   snd_pcm_hw_params_any(handle, hwParams);
 
   int err = snd_pcm_hw_params_set_access(handle, hwParams,
-                                        SND_PCM_ACCESS_RW_INTERLEAVED);
+                                         SND_PCM_ACCESS_RW_INTERLEAVED);
   if (err < 0) {
     std::cerr << "ALSA: Cannot set access: " << snd_strerror(err) << "\n";
     return false;
@@ -379,12 +383,10 @@ bool ConfigurePcm(snd_pcm_t *handle, snd_pcm_format_t format,
   return true;
 }
 
-std::optional<AlsaHandle> OpenPcm(const std::string &device,
-                                 snd_pcm_stream_t stream,
-                                 snd_pcm_format_t format,
-                                 unsigned int channels, unsigned int rate,
-                                 snd_pcm_uframes_t period,
-                                 snd_pcm_uframes_t buffer) {
+std::optional<AlsaHandle>
+OpenPcm(const std::string &device, snd_pcm_stream_t stream,
+        snd_pcm_format_t format, unsigned int channels, unsigned int rate,
+        snd_pcm_uframes_t period, snd_pcm_uframes_t buffer) {
   snd_pcm_t *handle = nullptr;
   int err = snd_pcm_open(&handle, device.c_str(), stream, 0);
   if (err < 0) {
@@ -405,16 +407,17 @@ std::optional<AlsaHandle> OpenPcm(const std::string &device,
   return result;
 }
 
-std::optional<AlsaHandle> OpenCaptureAutoRate(
-    const std::string &device, snd_pcm_format_t format, unsigned int channels,
-    unsigned int requestedRate, snd_pcm_uframes_t period,
-    snd_pcm_uframes_t buffer) {
+std::optional<AlsaHandle>
+OpenCaptureAutoRate(const std::string &device, snd_pcm_format_t format,
+                    unsigned int channels, unsigned int requestedRate,
+                    snd_pcm_uframes_t period, snd_pcm_uframes_t buffer) {
   if (requestedRate != 0) {
     return OpenPcm(device, SND_PCM_STREAM_CAPTURE, format, channels,
                    requestedRate, period, buffer);
   }
 
-  const unsigned int candidates[] = {44100, 48000, 88200, 96000, 176400, 192000};
+  const unsigned int candidates[] = {44100, 48000,  88200,
+                                     96000, 176400, 192000};
   for (unsigned int candidate : candidates) {
     auto handle = OpenPcm(device, SND_PCM_STREAM_CAPTURE, format, channels,
                           candidate, period, buffer);
@@ -496,7 +499,8 @@ bool ReadFull(snd_pcm_t *handle, void *buffer, snd_pcm_uframes_t frames) {
   return remaining == 0;
 }
 
-bool WriteFull(snd_pcm_t *handle, const void *buffer, snd_pcm_uframes_t frames) {
+bool WriteFull(snd_pcm_t *handle, const void *buffer,
+               snd_pcm_uframes_t frames) {
   auto *ptr = static_cast<const uint8_t *>(buffer);
   snd_pcm_uframes_t remaining = frames;
   size_t frameBytes = static_cast<size_t>(snd_pcm_frames_to_bytes(handle, 1));
@@ -510,8 +514,8 @@ bool WriteFull(snd_pcm_t *handle, const void *buffer, snd_pcm_uframes_t frames) 
       continue;
     }
     if (n < 0) {
-      std::cerr << "ALSA playback error: "
-                << snd_strerror(static_cast<int>(n)) << "\n";
+      std::cerr << "ALSA playback error: " << snd_strerror(static_cast<int>(n))
+                << "\n";
       return false;
     }
     if (n == 0) {
@@ -558,10 +562,9 @@ int main(int argc, char **argv) {
     std::string filterError;
     std::optional<AlsaHandle> capturePreview;
 
-    auto preview = OpenCaptureAutoRate(options.inputDevice, format,
-                                       options.channels, options.requestedRate,
-                                       options.periodFrames,
-                                       options.bufferFrames);
+    auto preview = OpenCaptureAutoRate(
+        options.inputDevice, format, options.channels, options.requestedRate,
+        options.periodFrames, options.bufferFrames);
     if (!preview) {
       return 1;
     }
@@ -572,8 +575,7 @@ int main(int argc, char **argv) {
     if (filterPath && upsampler.LoadFilter(*filterPath, &filterError)) {
       filterConfig = upsampler.GetConfig();
       channelUpsamplers.assign(options.channels, upsampler);
-      options.periodFrames =
-          static_cast<unsigned int>(filterConfig->blockSize);
+      options.periodFrames = static_cast<unsigned int>(filterConfig->blockSize);
     } else if (filterPath) {
       std::cerr << "Filter load failed: " << filterError << "\n";
       std::cerr << "Filter path: " << *filterPath << "\n";
@@ -586,9 +588,9 @@ int main(int argc, char **argv) {
     periodFrames = 1024;
   }
 
-  auto capture = OpenCaptureAutoRate(
-      options.inputDevice, format, options.channels, options.requestedRate,
-      periodFrames, options.bufferFrames);
+  auto capture = OpenCaptureAutoRate(options.inputDevice, format,
+                                     options.channels, options.requestedRate,
+                                     periodFrames, options.bufferFrames);
   if (!capture) {
     return 1;
   }
@@ -636,8 +638,8 @@ int main(int argc, char **argv) {
         for (size_t i = 0; i < frames; ++i) {
           channel[i] = floatBuffer[i * options.channels + ch];
         }
-        std::vector<float> out = channelUpsamplers[ch].ProcessBlock(
-            channel.data(), channel.size());
+        std::vector<float> out =
+            channelUpsamplers[ch].ProcessBlock(channel.data(), channel.size());
         if (out.size() != frames) {
           std::cerr << "Filter output size mismatch\n";
           gRunning.store(false);
@@ -656,7 +658,8 @@ int main(int argc, char **argv) {
       break;
     }
 
-    if (!WriteFull(playback->handle, outBuffer.data(), playback->periodFrames)) {
+    if (!WriteFull(playback->handle, outBuffer.data(),
+                   playback->periodFrames)) {
       break;
     }
   }
