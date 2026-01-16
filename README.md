@@ -28,6 +28,7 @@ This repository hosts the minimal GPU upsampler that migrates Vulkan+EQ+FastAPI/
 - Build: `cmake -B build -DENABLE_ALSA=ON` then `cmake --build build -j$(nproc)`
 - Run (minimal): `./build/alsa_streamer --in hw:0 --out hw:0`
 - Run with filter: `./build/alsa_streamer --in hw:0 --out hw:0 --filter data/coefficients/filter_44k_1x_2m_min_phase.json`
+- Auto-select filter set: `./build/alsa_streamer --in hw:0 --out hw:0 --filter-dir data/coefficients --ratio 2 --phase min`
 - XRUN handling: logs the XRUN and calls `snd_pcm_recover` to continue streaming; if recovery fails the app exits
 
 ### Directory layout
@@ -79,6 +80,7 @@ build/     : Build artifacts
 - ビルド: `cmake -B build -DENABLE_ALSA=ON` → `cmake --build build -j$(nproc)`
 - 起動（最小）: `./build/alsa_streamer --in hw:0 --out hw:0`
 - フィルタ指定: `./build/alsa_streamer --in hw:0 --out hw:0 --filter data/coefficients/filter_44k_1x_2m_min_phase.json`
+- フィルタ自動選択: `./build/alsa_streamer --in hw:0 --out hw:0 --filter-dir data/coefficients --ratio 2 --phase min`
 - XRUN 対応: XRUN をログに出し、`snd_pcm_recover` で継続。復帰不能なら終了
 
 ### ディレクトリ構成案

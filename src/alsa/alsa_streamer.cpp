@@ -6,6 +6,7 @@
 #include <csignal>
 #include <cstdint>
 #include <cstring>
+#include <filesystem>
 #include <iostream>
 #include <optional>
 #include <string>
@@ -20,6 +21,7 @@ struct CliOptions {
   std::string outputDevice;
   std::string filterPath;
   std::string filterDir = "data/coefficients";
+  bool filterDirSpecified = false;
   std::string phase = "min";
   unsigned int channels = 2;
   unsigned int requestedRate = 0;
@@ -110,6 +112,7 @@ bool ParseArgs(int argc, char **argv, CliOptions *options) {
         return false;
       }
       options->filterDir = val;
+      options->filterDirSpecified = true;
       continue;
     }
     if (arg == "--phase") {
@@ -436,6 +439,10 @@ std::optional<std::string> ResolveFilterPath(const CliOptions &options,
     return options.filterPath;
   }
 
+  if (options.filterDir.empty()) {
+    return std::nullopt;
+  }
+
   unsigned int family = 0;
   if (inputRate % 44100 == 0) {
     family = 44;
@@ -558,28 +565,46 @@ int main(int argc, char **argv) {
   std::vector<totton::vulkan::VulkanStreamingUpsampler> channelUpsamplers;
 
   std::optional<totton::vulkan::FilterConfig> filterConfig;
-  if (!options.filterPath.empty() || !options.filterDir.empty()) {
-    std::string filterError;
-    std::optional<AlsaHandle> capturePreview;
+  const bool filterRequired = !options.filterPath.empty();
+  const bool autoFilterRequested =
+      options.filterDirSpecified || !options.filterPath.empty();
 
-    auto preview = OpenCaptureAutoRate(
-        options.inputDevice, format, options.channels, options.requestedRate,
-        options.periodFrames, options.bufferFrames);
-    if (!preview) {
-      return 1;
+  if (filterRequired || autoFilterRequested) {
+    std::string filterError;
+    unsigned int inputRate = options.requestedRate;
+
+    if (inputRate == 0) {
+      auto preview = OpenCaptureAutoRate(
+          options.inputDevice, format, options.channels,
+          options.requestedRate, options.periodFrames, options.bufferFrames);
+      if (!preview) {
+        return 1;
+      }
+      inputRate = preview->rate;
+      snd_pcm_close(preview->handle);
     }
-    unsigned int inputRate = preview->rate;
-    snd_pcm_close(preview->handle);
 
     auto filterPath = ResolveFilterPath(options, inputRate);
-    if (filterPath && upsampler.LoadFilter(*filterPath, &filterError)) {
+    if (filterPath && !std::filesystem::exists(*filterPath)) {
+      if (filterRequired) {
+        std::cerr << "Filter file not found: " << *filterPath << "\n";
+        return 1;
+      }
+      std::cerr << "Filter not available, continuing without filter: "
+                << *filterPath << "\n";
+    } else if (filterPath && upsampler.LoadFilter(*filterPath, &filterError)) {
       filterConfig = upsampler.GetConfig();
       channelUpsamplers.assign(options.channels, upsampler);
       options.periodFrames = static_cast<unsigned int>(filterConfig->blockSize);
-    } else if (filterPath) {
+    } else if (filterRequired) {
       std::cerr << "Filter load failed: " << filterError << "\n";
-      std::cerr << "Filter path: " << *filterPath << "\n";
+      if (filterPath) {
+        std::cerr << "Filter path: " << *filterPath << "\n";
+      }
       return 1;
+    } else if (filterPath) {
+      std::cerr << "Filter not available, continuing without filter: "
+                << *filterPath << "\n";
     }
   }
 
