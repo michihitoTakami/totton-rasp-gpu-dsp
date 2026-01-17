@@ -93,6 +93,7 @@ bool ZmqCommandServer::Start() {
   }
   if (!InitializeSockets()) {
     running_.store(false);
+    CleanupSockets();
     return false;
   }
 
@@ -117,6 +118,7 @@ void ZmqCommandServer::Stop() {
   if (serverThread_.joinable()) {
     serverThread_.join();
   }
+  CleanupSockets();
 }
 
 std::string ZmqCommandServer::BuildOk(const std::string &dataJson) {
