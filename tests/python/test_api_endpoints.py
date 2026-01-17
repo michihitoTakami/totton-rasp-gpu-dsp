@@ -55,9 +55,7 @@ def test_api_status_uses_stats_and_zmq(monkeypatch):
 
 def test_api_phase_type_get(monkeypatch):
     dummy = _DummyClient(
-        send_command_response=_DummyResponse(
-            True, "ok", data={"phase_type": "linear"}
-        )
+        send_command_response=_DummyResponse(True, "ok", data={"phase_type": "linear"})
     )
     monkeypatch.setattr("web.routers.daemon.get_daemon_client", lambda: dummy)
 
@@ -70,9 +68,7 @@ def test_api_phase_type_get(monkeypatch):
 
 def test_api_phase_type_set(monkeypatch):
     dummy = _DummyClient(
-        send_json_response=_DummyResponse(
-            True, "ok", data={"phase_type": "minimum"}
-        )
+        send_json_response=_DummyResponse(True, "ok", data={"phase_type": "minimum"})
     )
     monkeypatch.setattr("web.routers.daemon.get_daemon_client", lambda: dummy)
 
