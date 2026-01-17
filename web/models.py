@@ -1,6 +1,6 @@
 """Pydantic models for Web API responses."""
 
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, Field, StringConstraints
 from typing_extensions import Annotated
@@ -75,3 +75,29 @@ class ApiResponse(BaseModel):
     message: str
     data: Optional[dict[str, Any]] = None
     restart_required: bool = False
+
+
+class StatusResponse(BaseModel):
+    """Minimal daemon status for UI."""
+
+    daemon_running: bool
+    state: str
+    input_rate: int
+    output_rate: int
+    xrun_total: int
+    phase_type: Optional[str] = None
+    uptime_ms: Optional[int] = None
+    reloads: Optional[int] = None
+    soft_resets: Optional[int] = None
+
+
+class PhaseTypeResponse(BaseModel):
+    """Current phase type response."""
+
+    phase_type: str
+
+
+class PhaseTypeUpdateRequest(BaseModel):
+    """Phase type update request."""
+
+    phase_type: Literal["minimum", "linear"]

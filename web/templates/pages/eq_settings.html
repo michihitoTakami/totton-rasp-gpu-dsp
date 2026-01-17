@@ -6,9 +6,61 @@
 {% block content %}
 <div x-data="eqApp()" x-init="init()">
   <header class="page-header">
-    <h1 class="page-title">EQ Profile Manager</h1>
-    <p class="page-subtitle">Upload, validate, and switch OPRA-compatible EQ profiles.</p>
+    <h1 class="page-title">Magic Box Control</h1>
+    <p class="page-subtitle">EQ control, phase switching, and live DSP status.</p>
   </header>
+
+  <div class="grid grid-2">
+    {% call panels.card_panel("System Status") %}
+      <div class="info-row">
+        <div>
+          <div class="muted">State</div>
+          <div class="mono" x-text="status.state"></div>
+        </div>
+        <span class="badge" :class="status.daemon_running ? 'badge-on' : 'badge-off'" x-text="status.daemon_running ? 'RUNNING' : 'STOPPED'"></span>
+      </div>
+      <div class="info-row">
+        <div class="muted">Input Rate</div>
+        <div class="mono" x-text="formatRate(status.input_rate)"></div>
+      </div>
+      <div class="info-row">
+        <div class="muted">Output Rate</div>
+        <div class="mono" x-text="formatRate(status.output_rate)"></div>
+      </div>
+      <div class="info-row">
+        <div class="muted">XRUN Total</div>
+        <div class="mono" x-text="status.xrun_total"></div>
+      </div>
+      <div class="info-row" x-show="status.uptime_ms !== null">
+        <div class="muted">Uptime</div>
+        <div class="mono" x-text="formatUptime(status.uptime_ms)"></div>
+      </div>
+      <div class="info-row" x-show="status.phase_type">
+        <div class="muted">Phase</div>
+        <div class="mono" x-text="status.phase_type"></div>
+      </div>
+    {% endcall %}
+
+    {% call panels.card_panel("DSP Controls") %}
+      <div class="info-row">
+        <div>
+          <div class="muted">Phase</div>
+          <div class="mono" x-text="phaseType"></div>
+        </div>
+        <div class="profile-actions">
+          {{ buttons.btn_primary('Minimum', click="setPhase('minimum')", disabled="actionPending || phaseType === 'minimum'", attrs=':class="phaseType === \\'minimum\\' ? \\'\\' : \\'btn-secondary\\''") }}
+          {{ buttons.btn_primary('Linear', click="setPhase('linear')", disabled="actionPending || phaseType === 'linear'", attrs=':class="phaseType === \\'linear\\' ? \\'\\' : \\'btn-secondary\\''") }}
+        </div>
+      </div>
+      <div class="profile-actions" style="margin-top: 12px;">
+        {{ buttons.btn_primary('Reload', click='requestReload()', disabled='actionPending') }}
+        {{ buttons.btn_primary('Soft Reset', click='requestSoftReset()', disabled='actionPending', extra_class='btn-secondary') }}
+        {{ buttons.btn_primary('Refresh Status', click='fetchStatus()', disabled='actionPending', extra_class='btn-secondary') }}
+      </div>
+      <div class="notice success" x-show="actionMessage" x-text="actionMessage" style="margin-top: 16px;"></div>
+      <div class="notice error" x-show="actionError" x-text="actionError" style="margin-top: 16px;"></div>
+    {% endcall %}
+  </div>
 
   <div class="grid grid-2">
     {% call panels.card_panel("Active Profile") %}
@@ -93,14 +145,38 @@ function eqApp() {
     validation: null,
     upload: { file: null },
     recommendedPreamp: 0,
-    init() {
-      this.refresh();
+    status: {
+      daemon_running: false,
+      state: 'stopped',
+      input_rate: 0,
+      output_rate: 0,
+      xrun_total: 0,
+      phase_type: null,
+      uptime_ms: null,
+      reloads: null,
+      soft_resets: null
     },
-    async refresh() {
-      await Promise.all([this.fetchActive(), this.fetchProfiles()]);
+    phaseType: 'minimum',
+    actionPending: false,
+    actionMessage: null,
+    actionError: null,
+    statusTimer: null,
+    init() {
+      this.refreshAll();
+      this.statusTimer = setInterval(() => {
+        this.fetchStatus();
+      }, 2000);
+    },
+    async refreshAll() {
+      await Promise.all([
+        this.fetchActive(),
+        this.fetchProfiles(),
+        this.fetchStatus(),
+        this.fetchPhase()
+      ]);
     },
     async fetchActive() {
-      const response = await fetch('/eq/active');
+      const response = await fetch('/api/eq/active');
       if (!response.ok) {
         return;
       }
@@ -108,12 +184,33 @@ function eqApp() {
       this.activeEq = data;
     },
     async fetchProfiles() {
-      const response = await fetch('/eq/profiles');
+      const response = await fetch('/api/eq/profiles');
       if (!response.ok) {
         return;
       }
       const data = await response.json();
       this.profiles = data.profiles || [];
+    },
+    async fetchStatus() {
+      const response = await fetch('/api/status');
+      if (!response.ok) {
+        return;
+      }
+      const data = await response.json();
+      this.status = data;
+      if (data.phase_type) {
+        this.phaseType = data.phase_type;
+      }
+    },
+    async fetchPhase() {
+      const response = await fetch('/api/daemon/phase-type');
+      if (!response.ok) {
+        return;
+      }
+      const data = await response.json();
+      if (data.phase_type) {
+        this.phaseType = data.phase_type;
+      }
     },
     handleFile(event) {
       const files = event.target.files;
@@ -127,7 +224,7 @@ function eqApp() {
       }
       const formData = new FormData();
       formData.append('file', this.upload.file);
-      const response = await fetch('/eq/validate', { method: 'POST', body: formData });
+      const response = await fetch('/api/eq/validate', { method: 'POST', body: formData });
       const data = await response.json();
       this.validation = data;
       this.recommendedPreamp = data.recommended_preamp_db || 0;
@@ -138,7 +235,7 @@ function eqApp() {
       }
       const formData = new FormData();
       formData.append('file', this.upload.file);
-      const response = await fetch('/eq/import', { method: 'POST', body: formData });
+      const response = await fetch('/api/eq/import', { method: 'POST', body: formData });
       if (!response.ok) {
         const err = await response.json();
         this.validation = { valid: false, errors: [err.detail || 'Upload failed'], warnings: [] };
@@ -150,18 +247,87 @@ function eqApp() {
       await this.fetchProfiles();
     },
     async activateProfile(name) {
-      const response = await fetch(`/eq/activate/${encodeURIComponent(name)}`, { method: 'POST' });
+      const response = await fetch(`/api/eq/activate/${encodeURIComponent(name)}`, { method: 'POST' });
       if (!response.ok) {
         return;
       }
       await this.fetchActive();
     },
     async deactivateEq() {
-      const response = await fetch('/eq/deactivate', { method: 'POST' });
+      const response = await fetch('/api/eq/deactivate', { method: 'POST' });
       if (!response.ok) {
         return;
       }
       await this.fetchActive();
+    },
+    formatRate(rate) {
+      if (!rate || rate <= 0) {
+        return '—';
+      }
+      return `${rate} Hz`;
+    },
+    formatUptime(ms) {
+      if (ms === null || ms === undefined) {
+        return '—';
+      }
+      const seconds = Math.floor(ms / 1000);
+      const minutes = Math.floor(seconds / 60);
+      const hours = Math.floor(minutes / 60);
+      const remMinutes = minutes % 60;
+      const remSeconds = seconds % 60;
+      if (hours > 0) {
+        return `${hours}h ${remMinutes}m`;
+      }
+      if (minutes > 0) {
+        return `${minutes}m ${remSeconds}s`;
+      }
+      return `${remSeconds}s`;
+    },
+    async setPhase(phase) {
+      this.actionPending = true;
+      this.actionMessage = null;
+      this.actionError = null;
+      try {
+        const response = await fetch('/api/daemon/phase-type', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phase_type: phase })
+        });
+        if (!response.ok) {
+          const err = await response.json();
+          this.actionError = err.detail || 'Phase update failed';
+          return;
+        }
+        const data = await response.json();
+        this.actionMessage = data.message || 'Phase updated';
+        this.phaseType = phase;
+        await this.fetchStatus();
+      } finally {
+        this.actionPending = false;
+      }
+    },
+    async requestReload() {
+      await this.runDaemonAction('/api/daemon/reload', 'Reload requested');
+    },
+    async requestSoftReset() {
+      await this.runDaemonAction('/api/daemon/soft-reset', 'Soft reset requested');
+    },
+    async runDaemonAction(url, successMessage) {
+      this.actionPending = true;
+      this.actionMessage = null;
+      this.actionError = null;
+      try {
+        const response = await fetch(url, { method: 'POST' });
+        if (!response.ok) {
+          const err = await response.json();
+          this.actionError = err.detail || 'Command failed';
+          return;
+        }
+        this.actionMessage = successMessage;
+        await this.fetchStatus();
+      } finally {
+        this.actionPending = false;
+      }
     }
   };
 }

@@ -10,3 +10,10 @@ if [ ! -d build ]; then
 fi
 
 /usr/bin/ctest --test-dir build --output-on-failure --parallel 2
+
+if ! command -v uv >/dev/null 2>&1; then
+  echo "uv is required to run pytest (install with: pipx install uv)" >&2
+  exit 1
+fi
+
+uv run pytest
