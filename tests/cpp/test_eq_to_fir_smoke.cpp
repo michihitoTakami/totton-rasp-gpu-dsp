@@ -45,7 +45,8 @@ void TestEqMagnitudeUnity() {
   size_t fftSize = 1024;
   size_t numBins = fftSize / 2 + 1;
   double outputRate = SAMPLE_RATE * 16;
-  auto magnitude = computeEqMagnitudeForFft(numBins, fftSize, outputRate, profile);
+  auto magnitude =
+      computeEqMagnitudeForFft(numBins, fftSize, outputRate, profile);
   assert(magnitude.size() == numBins);
   for (double value : magnitude) {
     ExpectNear(value, 1.0, 1e-6);

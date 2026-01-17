@@ -27,11 +27,10 @@ void TestParseFilterType() {
 
 void TestParseEqString() {
   EqProfile profile;
-  std::string content =
-      "Preamp: -6 dB\n"
-      "Filter 1: ON PK Fc 1000 Hz Gain -3 dB Q 1.41\n"
-      "Filter: OFF LS Fc 80 Hz Gain 2 dB Q 0.7\n"
-      "Filter 3: ON PK Fc 500 Hz Gain -2 dB BW 100 Hz\n";
+  std::string content = "Preamp: -6 dB\n"
+                        "Filter 1: ON PK Fc 1000 Hz Gain -3 dB Q 1.41\n"
+                        "Filter: OFF LS Fc 80 Hz Gain 2 dB Q 0.7\n"
+                        "Filter 3: ON PK Fc 500 Hz Gain -2 dB BW 100 Hz\n";
 
   assert(parseEqString(content, profile));
   ExpectNear(profile.preampDb, -6.0, 1e-9);
