@@ -79,9 +79,7 @@ def sanitize_filename(filename: str) -> str | None:
 
 def _parse_filter_line(line: str) -> dict[str, Any] | None:
     """Parse a single filter line with flexible parameter matching."""
-    base_pattern = (
-        r"Filter\s*(\d+)?\s*:\s+(ON|OFF)\s+(.+?)\s+Fc\s+([\d.]+)\s*(?:Hz)?"
-    )
+    base_pattern = r"Filter\s*(\d+)?\s*:\s+(ON|OFF)\s+(.+?)\s+Fc\s+([\d.]+)\s*(?:Hz)?"
 
     match = re.match(base_pattern, line, re.IGNORECASE)
     if not match:

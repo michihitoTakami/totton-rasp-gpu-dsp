@@ -123,7 +123,9 @@ async def list_eq_profiles():
 
                 if content:
                     filter_count = sum(
-                        1 for line in content.split("\n") if line.strip().startswith("Filter ")
+                        1
+                        for line in content.split("\n")
+                        if line.strip().startswith("Filter ")
                     )
 
                 stat = f.stat()

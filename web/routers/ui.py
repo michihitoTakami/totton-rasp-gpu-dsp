@@ -14,6 +14,4 @@ router = APIRouter(tags=["ui"])
 @router.get("/", response_class=HTMLResponse)
 async def eq_settings(request: Request):
     """Render EQ settings page."""
-    return TEMPLATES.TemplateResponse(
-        "pages/eq_settings.html", {"request": request}
-    )
+    return TEMPLATES.TemplateResponse("pages/eq_settings.html", {"request": request})
