@@ -1,0 +1,169 @@
+{% extends "layout.html" %}
+{% import "components/buttons.html" as buttons %}
+{% import "components/card_panel.html" as panels %}
+{% import "components/slider_input.html" as sliders %}
+
+{% block content %}
+<div x-data="eqApp()" x-init="init()">
+  <header class="page-header">
+    <h1 class="page-title">EQ Profile Manager</h1>
+    <p class="page-subtitle">Upload, validate, and switch OPRA-compatible EQ profiles.</p>
+  </header>
+
+  <div class="grid grid-2">
+    {% call panels.card_panel("Active Profile") %}
+      <div class="info-row">
+        <div>
+          <div class="mono" x-text="activeEq.name || 'None'"></div>
+          <div class="muted" x-text="activeEq.active ? 'Profile is active' : 'No EQ profile active'"></div>
+        </div>
+        <span class="badge" :class="activeEq.active ? 'badge-on' : 'badge-off'" x-text="activeEq.active ? 'ON' : 'OFF'"></span>
+      </div>
+      <div class="info-row" x-show="activeEq.active && activeEq.source_type">
+        <div class="muted">Source</div>
+        <div class="mono" x-text="activeEq.source_type"></div>
+      </div>
+      <div class="info-row" x-show="activeEq.active && activeEq.has_modern_target">
+        <div class="muted">Modern Target</div>
+        <div class="badge badge-warning">KB5000_7</div>
+      </div>
+      <div class="notice warning" x-show="activeEq.error" x-text="activeEq.error"></div>
+      <div class="profile-actions" style="margin-top: 16px;">
+        {{ buttons.btn_primary('Deactivate EQ', click='deactivateEq()', disabled='!activeEq.active', extra_class='btn-secondary') }}
+      </div>
+    {% endcall %}
+
+    {% call panels.card_panel("Upload & Validate") %}
+      <div class="form-group">
+        <label for="eqFile">EQ Profile (.txt)</label>
+        <input id="eqFile" type="file" accept=".txt" @change="handleFile($event)">
+      </div>
+      <div class="profile-actions">
+        {{ buttons.btn_primary('Validate', click='validateUpload()', disabled='!upload.file') }}
+        {{ buttons.btn_primary('Import', click='importProfile()', disabled='!upload.file') }}
+      </div>
+
+      <div class="notice" x-show="validation && validation.valid">
+        Validation passed: <span class="mono" x-text="validation.filter_count"></span> filters.
+      </div>
+      <div class="notice error" x-show="validation && validation.errors.length">
+        <template x-for="err in validation.errors" :key="err">
+          <div x-text="err"></div>
+        </template>
+      </div>
+      <div class="notice warning" x-show="validation && validation.warnings.length">
+        <template x-for="warn in validation.warnings" :key="warn">
+          <div x-text="warn"></div>
+        </template>
+      </div>
+
+      <div x-show="validation && validation.preamp_db !== null" style="margin-top: 16px;">
+        <div class="info-row">
+          <div class="muted">Preamp (from file)</div>
+          <div class="mono" x-text="validation.preamp_db + ' dB'"></div>
+        </div>
+        {{ sliders.slider_input(min=-30, max=0, step=0.1, model='recommendedPreamp', disabled='true', label='Recommended Preamp (Headroom)', id='recommendedPreamp') }}
+      </div>
+    {% endcall %}
+  </div>
+
+  {% call panels.card_panel("Saved Profiles") %}
+    <div class="profile-list" x-show="profiles.length">
+      <template x-for="profile in profiles" :key="profile.name">
+        <div class="profile-item">
+          <div>
+            <div class="mono" x-text="profile.name"></div>
+            <div class="muted" x-text="profile.filter_count + ' filters'"></div>
+          </div>
+          <div class="profile-actions">
+            {{ buttons.btn_primary('Activate', click="activateProfile(profile.name)", disabled="activeEq.name === profile.name") }}
+          </div>
+        </div>
+      </template>
+    </div>
+    <div class="notice" x-show="!profiles.length">No saved profiles yet.</div>
+  {% endcall %}
+</div>
+
+<script>
+function eqApp() {
+  return {
+    activeEq: { active: false, name: null, error: null, source_type: null, has_modern_target: false },
+    profiles: [],
+    validation: null,
+    upload: { file: null },
+    recommendedPreamp: 0,
+    init() {
+      this.refresh();
+    },
+    async refresh() {
+      await Promise.all([this.fetchActive(), this.fetchProfiles()]);
+    },
+    async fetchActive() {
+      const response = await fetch('/eq/active');
+      if (!response.ok) {
+        return;
+      }
+      const data = await response.json();
+      this.activeEq = data;
+    },
+    async fetchProfiles() {
+      const response = await fetch('/eq/profiles');
+      if (!response.ok) {
+        return;
+      }
+      const data = await response.json();
+      this.profiles = data.profiles || [];
+    },
+    handleFile(event) {
+      const files = event.target.files;
+      this.upload.file = files && files.length ? files[0] : null;
+      this.validation = null;
+      this.recommendedPreamp = 0;
+    },
+    async validateUpload() {
+      if (!this.upload.file) {
+        return;
+      }
+      const formData = new FormData();
+      formData.append('file', this.upload.file);
+      const response = await fetch('/eq/validate', { method: 'POST', body: formData });
+      const data = await response.json();
+      this.validation = data;
+      this.recommendedPreamp = data.recommended_preamp_db || 0;
+    },
+    async importProfile() {
+      if (!this.upload.file) {
+        return;
+      }
+      const formData = new FormData();
+      formData.append('file', this.upload.file);
+      const response = await fetch('/eq/import', { method: 'POST', body: formData });
+      if (!response.ok) {
+        const err = await response.json();
+        this.validation = { valid: false, errors: [err.detail || 'Upload failed'], warnings: [] };
+        return;
+      }
+      const data = await response.json();
+      this.validation = { valid: true, errors: [], warnings: data.data?.warnings || [] };
+      this.recommendedPreamp = data.data?.recommended_preamp_db || 0;
+      await this.fetchProfiles();
+    },
+    async activateProfile(name) {
+      const response = await fetch(`/eq/activate/${encodeURIComponent(name)}`, { method: 'POST' });
+      if (!response.ok) {
+        return;
+      }
+      await this.fetchActive();
+    },
+    async deactivateEq() {
+      const response = await fetch('/eq/deactivate', { method: 'POST' });
+      if (!response.ok) {
+        return;
+      }
+      await this.fetchActive();
+    }
+  };
+}
+</script>
+{% endblock %}

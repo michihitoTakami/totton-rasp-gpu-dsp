@@ -20,6 +20,16 @@ target_include_directories(vulkan_upsampler
 
 target_compile_features(vulkan_upsampler PUBLIC cxx_std_17)
 
+add_library(audio_eq
+    src/audio/eq_parser.cpp
+    src/audio/eq_to_fir.cpp
+)
+target_include_directories(audio_eq
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+target_compile_features(audio_eq PUBLIC cxx_std_17)
+
 enable_testing()
 
 if(ENABLE_VULKAN)
@@ -45,6 +55,18 @@ add_executable(upsampler_smoke
 )
 target_link_libraries(upsampler_smoke PRIVATE vulkan_upsampler)
 add_test(NAME upsampler_smoke COMMAND upsampler_smoke)
+
+add_executable(eq_parser_smoke
+    tests/cpp/test_eq_parser_smoke.cpp
+)
+target_link_libraries(eq_parser_smoke PRIVATE audio_eq)
+add_test(NAME eq_parser_smoke COMMAND eq_parser_smoke)
+
+add_executable(eq_to_fir_smoke
+    tests/cpp/test_eq_to_fir_smoke.cpp
+)
+target_link_libraries(eq_to_fir_smoke PRIVATE audio_eq)
+add_test(NAME eq_to_fir_smoke COMMAND eq_to_fir_smoke)
 
 if(ENABLE_VULKAN)
     target_compile_definitions(upsampler_smoke PRIVATE ENABLE_VULKAN=1)
