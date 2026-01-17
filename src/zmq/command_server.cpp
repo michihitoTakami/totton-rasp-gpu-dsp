@@ -38,6 +38,35 @@ std::string EscapeJson(const std::string &value) {
   return out.str();
 }
 
+bool LooksLikeJsonObject(const std::string &raw, bool *hasClosingBrace) {
+  const std::string whitespace = " \t\r\n";
+  std::size_t first = raw.find_first_not_of(whitespace);
+  if (first == std::string::npos) {
+    return false;
+  }
+  if (raw[first] != '{') {
+    return false;
+  }
+  std::size_t last = raw.find_last_not_of(whitespace);
+  if (last == std::string::npos) {
+    return false;
+  }
+  if (hasClosingBrace) {
+    *hasClosingBrace = (raw[last] == '}');
+  }
+  return true;
+}
+
+std::string Trim(const std::string &value) {
+  const std::string whitespace = " \t\r\n";
+  std::size_t first = value.find_first_not_of(whitespace);
+  if (first == std::string::npos) {
+    return {};
+  }
+  std::size_t last = value.find_last_not_of(whitespace);
+  return value.substr(first, last - first + 1);
+}
+
 } // namespace
 
 class ZmqCommandServer::Impl {
@@ -60,7 +89,7 @@ void ZmqCommandServer::Register(const std::string &command, Handler handler) {
 
 bool ZmqCommandServer::Start() {
   if (running_.exchange(true)) {
-    return false;
+    return true;
   }
   if (!InitializeSockets()) {
     running_.store(false);
@@ -105,6 +134,7 @@ std::string ZmqCommandServer::BuildError(const std::string &code,
 
 std::optional<std::string>
 ZmqCommandServer::Publish(const std::string &message) {
+  std::lock_guard<std::mutex> lock(pubMutex_);
   if (!impl_->pubSocket) {
     return std::nullopt;
   }
@@ -119,11 +149,27 @@ ZmqCommandServer::Publish(const std::string &message) {
 ZmqRequest ZmqCommandServer::BuildRequest(const std::string &raw) const {
   ZmqRequest req;
   req.raw = raw;
-  ExtractJsonString(raw, "cmd", &req.cmd);
+  bool hasClosingBrace = false;
+  req.isJson = LooksLikeJsonObject(raw, &hasClosingBrace);
+  if (req.isJson) {
+    if (!hasClosingBrace) {
+      req.parseError = "invalid json object";
+      return req;
+    }
+    ExtractJsonString(raw, "cmd", &req.cmd);
+    if (req.cmd.empty()) {
+      req.parseError = "cmd is required";
+    }
+  } else {
+    req.cmd = Trim(raw);
+  }
   return req;
 }
 
 std::string ZmqCommandServer::Dispatch(const ZmqRequest &request) {
+  if (!request.parseError.empty()) {
+    return BuildError("INVALID_JSON", request.parseError);
+  }
   if (request.cmd.empty()) {
     return BuildError("INVALID_JSON", "cmd is required");
   }
@@ -142,11 +188,13 @@ bool ZmqCommandServer::InitializeSockets() {
   try {
     impl_->repSocket.set(zmq::sockopt::linger, 0);
     impl_->repSocket.set(zmq::sockopt::rcvtimeo, 100);
+    CleanupIpcPath(endpoint_);
     impl_->repSocket.bind(endpoint_);
 
     if (!pubEndpoint_.empty()) {
       impl_->pubSocket.emplace(impl_->context, zmq::socket_type::pub);
       impl_->pubSocket->set(zmq::sockopt::linger, 0);
+      CleanupIpcPath(pubEndpoint_);
       impl_->pubSocket->bind(pubEndpoint_);
     }
     return true;
@@ -165,8 +213,13 @@ void ZmqCommandServer::CleanupSockets() {
   } catch (const zmq::error_t &) {
   }
 
-  if (endpoint_.rfind("ipc://", 0) == 0) {
-    std::filesystem::path path(endpoint_.substr(6));
+  CleanupIpcPath(endpoint_);
+  CleanupIpcPath(pubEndpoint_);
+}
+
+void ZmqCommandServer::CleanupIpcPath(const std::string &endpoint) const {
+  if (endpoint.rfind("ipc://", 0) == 0) {
+    std::filesystem::path path(endpoint.substr(6));
     std::error_code ec;
     std::filesystem::remove(path, ec);
   }

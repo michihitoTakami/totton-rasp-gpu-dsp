@@ -5,6 +5,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <mutex>
 #include <thread>
 #include <unordered_map>
 
@@ -13,6 +14,8 @@ namespace totton::zmq_server {
 struct ZmqRequest {
   std::string raw;
   std::string cmd;
+  std::string parseError;
+  bool isJson = false;
 };
 
 struct ZmqResponse {
@@ -42,12 +45,14 @@ private:
   std::string Dispatch(const ZmqRequest &request);
   bool InitializeSockets();
   void CleanupSockets();
+  void CleanupIpcPath(const std::string &endpoint) const;
 
   std::string endpoint_;
   std::string pubEndpoint_;
   std::unordered_map<std::string, Handler> handlers_;
   std::atomic<bool> running_{false};
   std::thread serverThread_;
+  std::mutex pubMutex_;
 
   class Impl;
   std::unique_ptr<Impl> impl_;

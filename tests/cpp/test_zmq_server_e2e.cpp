@@ -106,6 +106,14 @@ int main() {
     return 1;
   }
 
+  std::string invalid = SendCommand(req, "{invalid");
+  if (!Expect(invalid.find("\"status\":\"error\"") != std::string::npos &&
+                  invalid.find("INVALID_JSON") != std::string::npos,
+              "invalid json")) {
+    kill(pid, SIGKILL);
+    return 1;
+  }
+
   std::string stats = SendCommand(req, "{\"cmd\":\"STATS\"}");
   if (!Expect(stats.find("\"phase_type\"") != std::string::npos,
               "STATS has phase_type")) {
