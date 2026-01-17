@@ -56,7 +56,7 @@ gpu_os/
 ```bash
 # Filter generation
 uv sync
-uv run python scripts/filters/generate_minimum_phase.py --taps 640000
+uv run python -m scripts.filters.generate_minimum_phase --taps 80000
 
 # Build
 cmake -B build -DCMAKE_BUILD_TYPE=Release

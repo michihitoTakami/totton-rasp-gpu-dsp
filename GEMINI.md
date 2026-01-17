@@ -38,7 +38,7 @@ Think in English and answer in Japanese.
 ```
 gpu_os/
 ├── src/               # C++/CUDA (convolution_engine.cu, alsa_daemon.cpp)
-├── scripts/           # Python (generate_minimum_phase.py & generate_linear_phase.py, analysis tools)
+├── scripts/           # Python (filter generators, analysis tools)
 ├── data/coefficients/ # FIR filter binaries (640k-tap)
 ├── web/               # FastAPI Web UI
 └── docs/              # Documentation
@@ -49,7 +49,7 @@ gpu_os/
 ```bash
 # Filter generation (640k taps)
 uv sync
-uv run python scripts/filters/generate_minimum_phase.py --taps 640000
+uv run python -m scripts.filters.generate_minimum_phase --taps 80000
 
 # Build
 cmake -B build -DCMAKE_BUILD_TYPE=Release

@@ -41,14 +41,17 @@ int main() {
     return 1;
   }
 
-  auto autoPath = WriteDummyFilter(tempDir, "filter_44k_2x_2m_min_phase.json");
+  auto autoPath =
+      WriteDummyFilter(tempDir, "filter_44k_2x_80000_min_phase.json");
+  auto legacyPath =
+      WriteDummyFilter(tempDir, "filter_44k_2x_2m_min_phase.json");
   auto autoSelection = totton::alsa::ResolveFilterPath("", tempDir.string(),
                                                        "min", 2, 44100, &error);
   if (!Expect(autoSelection.has_value(), "auto selection")) {
     return 1;
   }
-  if (!Expect(autoSelection->path == autoPath.string(),
-              "auto selection path")) {
+  if (!Expect(autoSelection->path == legacyPath.string(),
+              "auto selection prefers highest taps")) {
     return 1;
   }
 

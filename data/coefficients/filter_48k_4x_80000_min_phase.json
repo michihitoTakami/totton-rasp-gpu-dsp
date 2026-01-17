@@ -1,0 +1,39 @@
+{
+  "generation_date": "2026-01-17T22:49:02.449283",
+  "n_taps_specified": 80000,
+  "n_taps_actual": 80000,
+  "sample_rate_input": 192000,
+  "sample_rate_output": 768000,
+  "upsample_ratio": 4,
+  "passband_end_hz": 20000,
+  "stopband_start_hz": 96000,
+  "target_stopband_attenuation_db": 160,
+  "kaiser_beta": 28.0,
+  "minimum_phase_method": "homomorphic",
+  "target_dc_gain": 4.0,
+  "output_basename": "filter_48k_4x_80000_min_phase",
+  "validation_results": {
+    "passband_ripple_db": 1.6795194568430816e-08,
+    "input_band_peak": 3.960000000000001,
+    "input_band_peak_normalized": 0.9900000000000002,
+    "stopband_attenuation_db": 174.55070378711463,
+    "peak_position": 13,
+    "peak_threshold_samples": 800,
+    "energy_ratio_first_to_second_half": 4737149289808.201,
+    "meets_stopband_spec": true,
+    "is_minimum_phase": true,
+    "is_symmetric": false,
+    "actual_taps": 80000,
+    "normalization": {
+      "original_dc_gain": 1.0000006847620284,
+      "target_dc_gain": 4.0,
+      "dc_gain_factor": 0.99,
+      "normalized_dc_gain": 3.9600000000000013,
+      "applied_scale": 3.9599972883442245,
+      "l1_norm": 37.00443350609026,
+      "l1_norm_ratio": 9.251108376522565,
+      "max_coefficient_amplitude": 0.7817953290476517,
+      "normalization_applied": true
+    }
+  }
+}
