@@ -125,24 +125,23 @@ int main(int argc, char **argv) {
                         totton::zmq_server::ZmqCommandServer::BuildOk(data)};
                   });
 
-  server.Register("PHASE_TYPE_SET",
-                  [&](const totton::zmq_server::ZmqRequest &request) {
-                    std::string phase = ExtractPhaseParam(request.raw);
-                    if (phase == "min") {
-                      phase = "minimum";
-                    }
-                    if (phase != "minimum" && phase != "linear") {
-                      return totton::zmq_server::ZmqResponse{
-                          totton::zmq_server::ZmqCommandServer::BuildError(
-                              "INVALID_PARAMS",
-                              "phase must be minimum or linear"),
-                          false};
-                    }
-                    phaseType = phase;
-                    std::string data = "{\"phase_type\":\"" + phaseType + "\"}";
-                    return totton::zmq_server::ZmqResponse{
-                        totton::zmq_server::ZmqCommandServer::BuildOk(data)};
-                  });
+  server.Register(
+      "PHASE_TYPE_SET", [&](const totton::zmq_server::ZmqRequest &request) {
+        std::string phase = ExtractPhaseParam(request.raw);
+        if (phase == "min") {
+          phase = "minimum";
+        }
+        if (phase != "minimum" && phase != "linear") {
+          return totton::zmq_server::ZmqResponse{
+              totton::zmq_server::ZmqCommandServer::BuildError(
+                  "INVALID_PARAMS", "phase must be minimum or linear"),
+              false};
+        }
+        phaseType = phase;
+        std::string data = "{\"phase_type\":\"" + phaseType + "\"}";
+        return totton::zmq_server::ZmqResponse{
+            totton::zmq_server::ZmqCommandServer::BuildOk(data)};
+      });
 
   server.Register("SHUTDOWN", [&](const totton::zmq_server::ZmqRequest &) {
     gRunning.store(false);
