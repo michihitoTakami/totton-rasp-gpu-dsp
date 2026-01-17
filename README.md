@@ -31,6 +31,12 @@ This repository hosts the minimal GPU upsampler that migrates Vulkan+EQ+FastAPI/
 - Auto-select filter set: `./build/alsa_streamer --in hw:0 --out hw:0 --filter-dir data/coefficients --ratio 2 --phase min`
 - XRUN handling: logs the XRUN and calls `snd_pcm_recover` to continue streaming; if recovery fails the app exits
 
+### ZeroMQ control server (Issue #4)
+- Build: `cmake -B build -DENABLE_ZMQ=ON` then `cmake --build build -j$(nproc)`
+- Run: `./build/zmq_control_server --endpoint ipc:///tmp/totton_zmq.sock`
+- Env override: `TOTTON_ZMQ_ENDPOINT` / `TOTTON_ZMQ_PUB_ENDPOINT`
+- Commands: `PING`, `STATS`, `RELOAD`, `SOFT_RESET`, `PHASE_TYPE_GET`, `PHASE_TYPE_SET`
+
 ### Directory layout
 ```
 src/       : Implementations for Vulkan/C++/ZeroMQ/ALSA
@@ -82,6 +88,12 @@ build/     : Build artifacts
 - フィルタ指定: `./build/alsa_streamer --in hw:0 --out hw:0 --filter data/coefficients/filter_44k_1x_2m_min_phase.json`
 - フィルタ自動選択: `./build/alsa_streamer --in hw:0 --out hw:0 --filter-dir data/coefficients --ratio 2 --phase min`
 - XRUN 対応: XRUN をログに出し、`snd_pcm_recover` で継続。復帰不能なら終了
+
+### ZeroMQ 制御サーバ (Issue #4)
+- ビルド: `cmake -B build -DENABLE_ZMQ=ON` → `cmake --build build -j$(nproc)`
+- 起動: `./build/zmq_control_server --endpoint ipc:///tmp/totton_zmq.sock`
+- 環境変数: `TOTTON_ZMQ_ENDPOINT` / `TOTTON_ZMQ_PUB_ENDPOINT`
+- コマンド: `PING`, `STATS`, `RELOAD`, `SOFT_RESET`, `PHASE_TYPE_GET`, `PHASE_TYPE_SET`
 
 ### ディレクトリ構成案
 ```
