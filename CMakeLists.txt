@@ -4,6 +4,7 @@ project(totton_rasp_gpu_dsp LANGUAGES CXX)
 option(ENABLE_VULKAN "Enable Vulkan upsampler" ON)
 option(USE_VKFFT "Use VkFFT backend when Vulkan is enabled" ON)
 option(ENABLE_ALSA "Enable ALSA streaming app" ON)
+option(ENABLE_ZMQ "Enable ZeroMQ control server" ON)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -80,4 +81,31 @@ if(ENABLE_ALSA)
         tests/cpp/test_alsa_streamer_e2e.cpp
     )
     add_test(NAME alsa_streamer_e2e COMMAND alsa_streamer_e2e)
+endif()
+
+if(ENABLE_ZMQ)
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(LIBZMQ REQUIRED libzmq)
+
+    add_library(zmq_command_server
+        src/zmq/command_server.cpp
+    )
+    target_include_directories(zmq_command_server
+        PUBLIC
+            ${CMAKE_CURRENT_SOURCE_DIR}/include
+            ${LIBZMQ_INCLUDE_DIRS}
+    )
+    target_link_libraries(zmq_command_server PUBLIC ${LIBZMQ_LIBRARIES})
+
+    add_executable(zmq_control_server
+        src/zmq/zmq_server_main.cpp
+    )
+    target_link_libraries(zmq_control_server PRIVATE zmq_command_server)
+
+    add_executable(zmq_server_e2e
+        tests/cpp/test_zmq_server_e2e.cpp
+    )
+    target_include_directories(zmq_server_e2e PRIVATE ${LIBZMQ_INCLUDE_DIRS})
+    target_link_libraries(zmq_server_e2e PRIVATE ${LIBZMQ_LIBRARIES})
+    add_test(NAME zmq_server_e2e COMMAND zmq_server_e2e)
 endif()
