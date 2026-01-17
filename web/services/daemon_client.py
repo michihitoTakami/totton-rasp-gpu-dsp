@@ -85,9 +85,7 @@ class DaemonClient:
         if isinstance(data, dict):
             status = data.get("status")
             if status == "ok":
-                return DaemonResponse(
-                    success=True, message="ok", data=data.get("data")
-                )
+                return DaemonResponse(success=True, message="ok", data=data.get("data"))
             if status == "error":
                 message = data.get("message") or "daemon error"
                 return DaemonResponse(success=False, message=message, data=data)
