@@ -43,8 +43,8 @@ ResolveFilterPath(const std::string &filterPath, const std::string &filterDir,
     phaseSuffix = "linear_phase";
   }
 
-  std::string prefix = "filter_" + std::to_string(family) + "k_" +
-                       std::to_string(ratio) + "x_";
+  std::string prefix =
+      "filter_" + std::to_string(family) + "k_" + std::to_string(ratio) + "x_";
   std::string suffix = "_" + phaseSuffix + ".json";
   std::optional<std::filesystem::path> bestPath;
   unsigned int bestTaps = 0;
