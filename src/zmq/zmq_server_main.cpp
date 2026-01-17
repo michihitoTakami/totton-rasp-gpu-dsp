@@ -95,15 +95,13 @@ int main(int argc, char **argv) {
 
   server.Register("STATS", [&](const totton::zmq_server::ZmqRequest &) {
     auto now = std::chrono::steady_clock::now();
-    auto uptimeMs = std::chrono::duration_cast<std::chrono::milliseconds>(
-                        now - startTime)
-                        .count();
-    std::string data = "{\"uptime_ms\":" + std::to_string(uptimeMs) +
-                       ",\"phase_type\":\"" + phaseType +
-                       "\",\"reloads\":" +
-                       std::to_string(reloadCount.load()) +
-                       ",\"soft_resets\":" +
-                       std::to_string(softResetCount.load()) + "}";
+    auto uptimeMs =
+        std::chrono::duration_cast<std::chrono::milliseconds>(now - startTime)
+            .count();
+    std::string data =
+        "{\"uptime_ms\":" + std::to_string(uptimeMs) + ",\"phase_type\":\"" +
+        phaseType + "\",\"reloads\":" + std::to_string(reloadCount.load()) +
+        ",\"soft_resets\":" + std::to_string(softResetCount.load()) + "}";
     return totton::zmq_server::ZmqResponse{
         totton::zmq_server::ZmqCommandServer::BuildOk(data)};
   });
@@ -122,8 +120,7 @@ int main(int argc, char **argv) {
 
   server.Register("PHASE_TYPE_GET",
                   [&](const totton::zmq_server::ZmqRequest &) {
-                    std::string data =
-                        "{\"phase_type\":\"" + phaseType + "\"}";
+                    std::string data = "{\"phase_type\":\"" + phaseType + "\"}";
                     return totton::zmq_server::ZmqResponse{
                         totton::zmq_server::ZmqCommandServer::BuildOk(data)};
                   });
@@ -134,13 +131,11 @@ int main(int argc, char **argv) {
                     if (phase != "min" && phase != "linear") {
                       return totton::zmq_server::ZmqResponse{
                           totton::zmq_server::ZmqCommandServer::BuildError(
-                              "INVALID_PARAMS",
-                              "phase must be min or linear"),
+                              "INVALID_PARAMS", "phase must be min or linear"),
                           false};
                     }
                     phaseType = phase;
-                    std::string data =
-                        "{\"phase_type\":\"" + phaseType + "\"}";
+                    std::string data = "{\"phase_type\":\"" + phaseType + "\"}";
                     return totton::zmq_server::ZmqResponse{
                         totton::zmq_server::ZmqCommandServer::BuildOk(data)};
                   });

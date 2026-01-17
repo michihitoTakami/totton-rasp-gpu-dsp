@@ -49,8 +49,7 @@ public:
 
 ZmqCommandServer::ZmqCommandServer(std::string endpoint,
                                    std::string pubEndpoint)
-    : endpoint_(std::move(endpoint)),
-      pubEndpoint_(std::move(pubEndpoint)),
+    : endpoint_(std::move(endpoint)), pubEndpoint_(std::move(pubEndpoint)),
       impl_(std::make_unique<Impl>()) {}
 
 ZmqCommandServer::~ZmqCommandServer() { Stop(); }
@@ -100,12 +99,12 @@ std::string ZmqCommandServer::BuildOk(const std::string &dataJson) {
 
 std::string ZmqCommandServer::BuildError(const std::string &code,
                                          const std::string &message) {
-  return "{\"status\":\"error\",\"error_code\":\"" +
-         EscapeJson(code) + "\",\"message\":\"" +
-         EscapeJson(message) + "\"}";
+  return "{\"status\":\"error\",\"error_code\":\"" + EscapeJson(code) +
+         "\",\"message\":\"" + EscapeJson(message) + "\"}";
 }
 
-std::optional<std::string> ZmqCommandServer::Publish(const std::string &message) {
+std::optional<std::string>
+ZmqCommandServer::Publish(const std::string &message) {
   if (!impl_->pubSocket) {
     return std::nullopt;
   }

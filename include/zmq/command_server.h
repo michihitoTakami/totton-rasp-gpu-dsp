@@ -53,8 +53,7 @@ private:
   std::unique_ptr<Impl> impl_;
 };
 
-std::string ExtractJsonString(const std::string &json,
-                              const std::string &key,
+std::string ExtractJsonString(const std::string &json, const std::string &key,
                               std::string *out);
 
 } // namespace totton::zmq_server

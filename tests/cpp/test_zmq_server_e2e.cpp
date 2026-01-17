@@ -101,8 +101,7 @@ int main() {
   }
 
   std::string pong = SendCommand(req, "{\"cmd\":\"PING\"}");
-  if (!Expect(pong.find("\"status\":\"ok\"") != std::string::npos,
-              "PING ok")) {
+  if (!Expect(pong.find("\"status\":\"ok\"") != std::string::npos, "PING ok")) {
     kill(pid, SIGKILL);
     return 1;
   }
@@ -115,9 +114,7 @@ int main() {
   }
 
   std::string setPhase = SendCommand(
-      req,
-      "{\"cmd\":\"PHASE_TYPE_SET\",\"params\":{\"phase\":\"linear\"}}"
-      );
+      req, "{\"cmd\":\"PHASE_TYPE_SET\",\"params\":{\"phase\":\"linear\"}}");
   if (!Expect(setPhase.find("\"status\":\"ok\"") != std::string::npos,
               "PHASE_TYPE_SET ok")) {
     kill(pid, SIGKILL);
