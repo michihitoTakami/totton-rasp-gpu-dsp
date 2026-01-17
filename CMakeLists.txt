@@ -3,6 +3,7 @@ project(totton_rasp_gpu_dsp LANGUAGES CXX)
 
 option(ENABLE_VULKAN "Enable Vulkan upsampler" ON)
 option(USE_VKFFT "Use VkFFT backend when Vulkan is enabled" ON)
+option(ENABLE_ALSA "Enable ALSA streaming app" ON)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -47,4 +48,36 @@ add_test(NAME upsampler_smoke COMMAND upsampler_smoke)
 if(ENABLE_VULKAN)
     target_compile_definitions(upsampler_smoke PRIVATE ENABLE_VULKAN=1)
     target_link_libraries(upsampler_smoke PRIVATE Vulkan::Vulkan)
+endif()
+
+if(ENABLE_ALSA)
+    find_package(ALSA REQUIRED)
+    add_library(alsa_utils
+        src/alsa/alsa_common.cpp
+        src/alsa/alsa_filter_selector.cpp
+    )
+    target_include_directories(alsa_utils PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+    target_link_libraries(alsa_utils PUBLIC ALSA::ALSA)
+
+    add_executable(alsa_streamer
+        src/alsa/alsa_streamer_main.cpp
+    )
+    target_link_libraries(alsa_streamer PRIVATE vulkan_upsampler alsa_utils)
+
+    add_executable(alsa_common_smoke
+        tests/cpp/test_alsa_common.cpp
+    )
+    target_link_libraries(alsa_common_smoke PRIVATE alsa_utils)
+    add_test(NAME alsa_common_smoke COMMAND alsa_common_smoke)
+
+    add_executable(alsa_filter_selector_smoke
+        tests/cpp/test_alsa_filter_selector.cpp
+    )
+    target_link_libraries(alsa_filter_selector_smoke PRIVATE alsa_utils)
+    add_test(NAME alsa_filter_selector_smoke COMMAND alsa_filter_selector_smoke)
+
+    add_executable(alsa_streamer_e2e
+        tests/cpp/test_alsa_streamer_e2e.cpp
+    )
+    add_test(NAME alsa_streamer_e2e COMMAND alsa_streamer_e2e)
 endif()
