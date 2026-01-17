@@ -75,4 +75,9 @@ if(ENABLE_ALSA)
     )
     target_link_libraries(alsa_filter_selector_smoke PRIVATE alsa_utils)
     add_test(NAME alsa_filter_selector_smoke COMMAND alsa_filter_selector_smoke)
+
+    add_executable(alsa_streamer_e2e
+        tests/cpp/test_alsa_streamer_e2e.cpp
+    )
+    add_test(NAME alsa_streamer_e2e COMMAND alsa_streamer_e2e)
 endif()
