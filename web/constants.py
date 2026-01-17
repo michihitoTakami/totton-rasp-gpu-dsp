@@ -9,6 +9,10 @@ CONFIG_PATH = PROJECT_ROOT / "config.json"
 EQ_PROFILES_DIR = PROJECT_ROOT / "data" / "EQ"
 
 ZEROMQ_IPC_PATH = "ipc:///tmp/totton_zmq.sock"
+STATS_FILE_PATH = Path("/tmp/gpu_upsampler_stats.json")
+
+PHASE_TYPE_MINIMUM = "minimum"
+PHASE_TYPE_LINEAR = "linear"
 
 MAX_EQ_FILE_SIZE = 1 * 1024 * 1024  # 1MB
 MAX_EQ_FILTERS = 100

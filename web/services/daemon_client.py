@@ -3,6 +3,7 @@
 import json
 import os
 from dataclasses import dataclass
+from typing import Any
 
 import zmq
 
@@ -24,6 +25,7 @@ class DaemonResponse:
 
     success: bool
     message: str
+    data: Any | None = None
 
 
 class DaemonClient:
@@ -66,6 +68,12 @@ class DaemonClient:
         response = socket.recv_string()
         return self._parse_response(response)
 
+    def send_json(self, payload: dict[str, Any]) -> DaemonResponse:
+        socket = self._ensure_connected()
+        socket.send_string(json.dumps(payload))
+        response = socket.recv_string()
+        return self._parse_response(response)
+
     @staticmethod
     def _parse_response(response: str) -> DaemonResponse:
         """Parse daemon response (JSON status or legacy text)."""
@@ -74,9 +82,17 @@ class DaemonClient:
         except json.JSONDecodeError:
             return DaemonResponse(success=response.startswith("OK"), message=response)
 
-        if isinstance(data, dict) and data.get("status") == "ok":
-            return DaemonResponse(success=True, message=response)
-        return DaemonResponse(success=False, message=response)
+        if isinstance(data, dict):
+            status = data.get("status")
+            if status == "ok":
+                return DaemonResponse(
+                    success=True, message="ok", data=data.get("data")
+                )
+            if status == "error":
+                message = data.get("message") or "daemon error"
+                return DaemonResponse(success=False, message=message, data=data)
+
+        return DaemonResponse(success=False, message="invalid response", data=data)
 
     def reload_config(self) -> tuple[bool, str]:
         result = self.send_command("RELOAD")
