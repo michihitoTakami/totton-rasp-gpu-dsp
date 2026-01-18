@@ -55,6 +55,19 @@ DacCapability::Capability createInvalidDac() {
   return cap;
 }
 
+// Helper to create a DAC capability with only min/max range
+DacCapability::Capability createRangeOnlyDac() {
+  DacCapability::Capability cap;
+  cap.deviceName = "test:range-only";
+  cap.minSampleRate = 44100;
+  cap.maxSampleRate = 768000;
+  cap.supportedRates.clear();
+  cap.maxChannels = 2;
+  cap.isValid = true;
+  cap.errorMessage.clear();
+  return cap;
+}
+
 // Test rate family detection
 void testRateFamilyDetection() {
   std::cout << "Testing rate family detection..." << std::endl;
@@ -186,6 +199,20 @@ void testLimitedDac() {
   std::cout << "  ✓ Limited DAC tests passed" << std::endl;
 }
 
+// Test DACs that only report a min/max range
+void testRangeOnlyDac() {
+  std::cout << "Testing range-only DAC capability..." << std::endl;
+
+  auto dac = createRangeOnlyDac();
+
+  auto config = negotiate(44100, dac);
+  assert(config.isValid);
+  assert(config.outputRate == 705600);
+  assert(config.upsampleRatio == 16);
+
+  std::cout << "  ✓ Range-only DAC tests passed" << std::endl;
+}
+
 // Test error cases
 void testErrorCases() {
   std::cout << "Testing error cases..." << std::endl;
@@ -221,6 +248,7 @@ int main() {
   testNegotiationFullDac();
   testReconfigurationDetection();
   testLimitedDac();
+  testRangeOnlyDac();
   testErrorCases();
 
   std::cout << "\n✓ All tests passed!\n" << std::endl;

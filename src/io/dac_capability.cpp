@@ -106,10 +106,8 @@ bool isRateSupported(const Capability &cap, int sampleRate) {
   if (sampleRate < cap.minSampleRate || sampleRate > cap.maxSampleRate) {
     return false;
   }
-  // If supportedRates is empty, we couldn't determine which rates are actually
-  // supported Be conservative and return false (unknown = unsupported)
   if (cap.supportedRates.empty()) {
-    return false;
+    return true;
   }
   return std::find(cap.supportedRates.begin(), cap.supportedRates.end(),
                    sampleRate) != cap.supportedRates.end();
@@ -117,6 +115,9 @@ bool isRateSupported(const Capability &cap, int sampleRate) {
 
 int getBestSupportedRate(const Capability &cap, int requestedRate) {
   if (!cap.isValid) {
+    return 0;
+  }
+  if (requestedRate < cap.minSampleRate) {
     return 0;
   }
   if (isRateSupported(cap, requestedRate)) {
