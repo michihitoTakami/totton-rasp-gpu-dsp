@@ -41,14 +41,17 @@ int main() {
     return 1;
   }
 
-  auto autoPath = WriteDummyFilter(tempDir, "filter_44k_2x_2m_min_phase.json");
+  auto autoPath =
+      WriteDummyFilter(tempDir, "filter_44k_2x_80000_min_phase.json");
+  auto legacyPath =
+      WriteDummyFilter(tempDir, "filter_44k_2x_2m_min_phase.json");
   auto autoSelection = totton::alsa::ResolveFilterPath("", tempDir.string(),
                                                        "min", 2, 44100, &error);
   if (!Expect(autoSelection.has_value(), "auto selection")) {
     return 1;
   }
-  if (!Expect(autoSelection->path == autoPath.string(),
-              "auto selection path")) {
+  if (!Expect(autoSelection->path == legacyPath.string(),
+              "auto selection prefers highest taps")) {
     return 1;
   }
 
@@ -59,6 +62,17 @@ int main() {
     return 1;
   }
   if (!Expect(!error.empty(), "invalid family error")) {
+    return 1;
+  }
+
+  error.clear();
+  auto missingDir = tempDir / "missing";
+  auto missingSelection = totton::alsa::ResolveFilterPath(
+      "", missingDir.string(), "min", 2, 44100, &error);
+  if (!Expect(!missingSelection.has_value(), "missing directory")) {
+    return 1;
+  }
+  if (!Expect(!error.empty(), "missing directory error")) {
     return 1;
   }
 

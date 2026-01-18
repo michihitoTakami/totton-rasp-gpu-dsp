@@ -14,7 +14,7 @@ This repository hosts the minimal GPU upsampler that migrates Vulkan+EQ+FastAPI/
 
 ### Setup overview
 1. Run `uv sync` to gather Python/C++/Vulkan dependencies (reusing `uv.lock`).
-2. Generate filters via `uv run python scripts/filters/generate_minimum_phase.py` if required.
+2. Generate filters via `uv run python -m scripts.filters.generate_minimum_phase --generate-all --taps 80000 --kaiser-beta 25 --stopband-attenuation 140` if required.
 3. Configure the build with `cmake -B build -DENABLE_VULKAN=ON` (and `-DUSE_VKFFT=ON` if needed).
 4. Run `pre-commit run --all-files` using the provided `.pre-commit-config.yaml`.
 5. Use `aqua.yaml` to keep lint/format tooling consistent via Aqua CLI.
@@ -27,7 +27,7 @@ This repository hosts the minimal GPU upsampler that migrates Vulkan+EQ+FastAPI/
 ### ALSA streaming (Issue #3)
 - Build: `cmake -B build -DENABLE_ALSA=ON` then `cmake --build build -j$(nproc)`
 - Run (minimal): `./build/alsa_streamer --in hw:0 --out hw:0`
-- Run with filter: `./build/alsa_streamer --in hw:0 --out hw:0 --filter data/coefficients/filter_44k_1x_2m_min_phase.json`
+- Run with filter: `./build/alsa_streamer --in hw:0 --out hw:0 --filter data/coefficients/filter_44k_2x_80000_min_phase.json`
 - Auto-select filter set: `./build/alsa_streamer --in hw:0 --out hw:0 --filter-dir data/coefficients --ratio 2 --phase min`
 - XRUN handling: logs the XRUN and calls `snd_pcm_recover` to continue streaming; if recovery fails the app exits
 
@@ -47,6 +47,12 @@ docs/      : Installation, specs, and tutorials
 web/       : FastAPI + Jinja2 templates (reusing macros such as btn_primary)
 build/     : Build artifacts
 ```
+
+### Bundled filters (Issue #7)
+- `data/coefficients/` ships 44k/48k families with ratios 2x/4x/8x/16x (minimum-phase, 80k taps).
+- Regenerate: `uv run python -m scripts.filters.generate_minimum_phase --generate-all --taps 80000 --kaiser-beta 25 --stopband-attenuation 140`
+- Target: Kaiser β=25, stopband attenuation 140 dB (temporary for 80k taps)
+- License/notes: generated coefficients follow this repository's license; no third-party datasets are embedded.
 
 ### References & next steps
 - Deliver on the goals/completion criteria defined in [Issue #1](https://github.com/michihitoTakami/totton-rasp-gpu-dsp/issues/1).
@@ -72,7 +78,7 @@ build/     : Build artifacts
 
 ### セットアップの概要
 1. `uv sync` で Python/C++/Vulkan 関連依存を整理（`uv.lock` を再利用）
-2. 必要に応じて `uv run python scripts/filters/generate_minimum_phase.py` などでフィルタを生成
+2. 必要に応じて `uv run python -m scripts.filters.generate_minimum_phase --generate-all --taps 80000 --kaiser-beta 25 --stopband-attenuation 140` でフィルタを生成
 3. `cmake -B build -DENABLE_VULKAN=ON`（必要に応じて `-DUSE_VKFFT=ON`）でビルド設定を作成
 4. `.pre-commit-config.yaml` で `pre-commit run --all-files` を実行
 5. `aqua.yaml` を使って Aqua CLI で lint/format を統一
@@ -85,7 +91,7 @@ build/     : Build artifacts
 ### ALSA ストリーミング (Issue #3)
 - ビルド: `cmake -B build -DENABLE_ALSA=ON` → `cmake --build build -j$(nproc)`
 - 起動（最小）: `./build/alsa_streamer --in hw:0 --out hw:0`
-- フィルタ指定: `./build/alsa_streamer --in hw:0 --out hw:0 --filter data/coefficients/filter_44k_1x_2m_min_phase.json`
+- フィルタ指定: `./build/alsa_streamer --in hw:0 --out hw:0 --filter data/coefficients/filter_44k_2x_80000_min_phase.json`
 - フィルタ自動選択: `./build/alsa_streamer --in hw:0 --out hw:0 --filter-dir data/coefficients --ratio 2 --phase min`
 - XRUN 対応: XRUN をログに出し、`snd_pcm_recover` で継続。復帰不能なら終了
 
@@ -105,6 +111,12 @@ docs/      : インストール/仕様/チュートリアル
 web/       : FastAPI + Jinja2 テンプレート（btn_primary 等の再利用必須）
 build/     : ビルドアウトプット
 ```
+
+### 同梱フィルタ (Issue #7)
+- `data/coefficients/` に 44k/48k の各ファミリ × 2/4/8/16x（最小位相、80kタップ）を同梱
+- 再生成: `uv run python -m scripts.filters.generate_minimum_phase --generate-all --taps 80000 --kaiser-beta 25 --stopband-attenuation 140`
+- 目標: Kaiser β=25, 阻止帯域減衰 140 dB（80kタップ暫定）
+- ライセンス/注意: 係数は本リポジトリのライセンスに従い、外部データセットは含まれません
 
 ### 参照と今後の流れ
 - [Issue #1](https://github.com/michihitoTakami/totton-rasp-gpu-dsp/issues/1) に書かれた EPIC の目的と完了条件を満たす
