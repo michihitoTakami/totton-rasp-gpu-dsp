@@ -23,6 +23,13 @@ ResolveFilterPath(const std::string &filterPath, const std::string &filterDir,
     return std::nullopt;
   }
 
+  if (!std::filesystem::exists(filterDir)) {
+    if (errorMessage) {
+      *errorMessage = "Filter directory not found: " + filterDir;
+    }
+    return std::nullopt;
+  }
+
   unsigned int family = 0;
   if (inputRate % 44100 == 0) {
     family = 44;

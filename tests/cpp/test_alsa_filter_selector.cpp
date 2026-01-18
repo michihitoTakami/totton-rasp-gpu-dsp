@@ -65,6 +65,17 @@ int main() {
     return 1;
   }
 
+  error.clear();
+  auto missingDir = tempDir / "missing";
+  auto missingSelection = totton::alsa::ResolveFilterPath(
+      "", missingDir.string(), "min", 2, 44100, &error);
+  if (!Expect(!missingSelection.has_value(), "missing directory")) {
+    return 1;
+  }
+  if (!Expect(!error.empty(), "missing directory error")) {
+    return 1;
+  }
+
   std::cout << "OK\n";
   return 0;
 }
