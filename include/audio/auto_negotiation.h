@@ -20,13 +20,14 @@ namespace AutoNegotiation {
 
 // Result of auto-negotiation
 struct NegotiatedConfig {
-    int inputRate;                          // Input sample rate
-    AudioEngine::RateFamily inputFamily;    // RATE_44K or RATE_48K
-    int outputRate;                         // Negotiated output rate
-    int upsampleRatio;                      // Upsampling ratio (outputRate / inputRate)
-    bool isValid;                           // Whether negotiation succeeded
-    bool requiresReconfiguration;           // True if ALSA needs reconfiguration (family change)
-    std::string errorMessage;               // Error message if failed
+  int inputRate;                       // Input sample rate
+  AudioEngine::RateFamily inputFamily; // RATE_44K or RATE_48K
+  int outputRate;                      // Negotiated output rate
+  int upsampleRatio;            // Upsampling ratio (outputRate / inputRate)
+  bool isValid;                 // Whether negotiation succeeded
+  bool requiresReconfiguration; // True if ALSA needs reconfiguration (family
+                                // change)
+  std::string errorMessage;     // Error message if failed
 };
 
 /**
@@ -34,7 +35,8 @@ struct NegotiatedConfig {
  *
  * @param inputRate Current input sample rate (e.g., 44100, 48000, 96000)
  * @param dacCap DAC capability information from DacCapability::scan()
- * @param currentOutputRate Currently configured output rate (0 if not configured)
+ * @param currentOutputRate Currently configured output rate (0 if not
+ * configured)
  * @return NegotiatedConfig with optimal settings
  *
  * Design Decision (Issue #12):
@@ -43,7 +45,8 @@ struct NegotiatedConfig {
  *   Same-family switching is instant and glitch-free.
  *   No resampling is used to preserve ultimate audio quality.
  */
-NegotiatedConfig negotiate(int inputRate, const DacCapability::Capability& dacCap,
+NegotiatedConfig negotiate(int inputRate,
+                           const DacCapability::Capability &dacCap,
                            int currentOutputRate = 0);
 
 /**
@@ -58,7 +61,7 @@ int getTargetRateForFamily(AudioEngine::RateFamily family);
  * Falls back to lower multiples if the ideal rate is not supported
  */
 int getBestRateForFamily(AudioEngine::RateFamily family,
-                         const DacCapability::Capability& dacCap);
+                         const DacCapability::Capability &dacCap);
 
 /**
  * @brief Calculate the upsampling ratio
@@ -76,4 +79,4 @@ bool isSameFamily(int rate1, int rate2);
  */
 AudioEngine::RateFamily getRateFamily(int sampleRate);
 
-}  // namespace AutoNegotiation
+} // namespace AutoNegotiation
