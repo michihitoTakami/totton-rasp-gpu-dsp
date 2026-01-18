@@ -16,10 +16,11 @@ See `docs/filter_format.md` for the schema (additional metadata fields are allow
 
 ## Regeneration command
 ```bash
-uv run python -m scripts.filters.generate_minimum_phase --generate-all --taps 80000
+uv run python -m scripts.filters.generate_minimum_phase --generate-all --taps 80000 --kaiser-beta 25 --stopband-attenuation 140
 ```
 
 ## License / Notes
 - These coefficients are generated from repository scripts and follow the repository license.
 - No third-party datasets are embedded in the filter taps.
 - If you change tap count or phase, re-check stopband attenuation and gain normalization.
+- Current target: Kaiser β=25, stopband attenuation 140 dB (temporary for 80k taps).

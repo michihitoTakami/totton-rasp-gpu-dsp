@@ -14,7 +14,7 @@ This repository hosts the minimal GPU upsampler that migrates Vulkan+EQ+FastAPI/
 
 ### Setup overview
 1. Run `uv sync` to gather Python/C++/Vulkan dependencies (reusing `uv.lock`).
-2. Generate filters via `uv run python -m scripts.filters.generate_minimum_phase --generate-all --taps 80000` if required.
+2. Generate filters via `uv run python -m scripts.filters.generate_minimum_phase --generate-all --taps 80000 --kaiser-beta 25 --stopband-attenuation 140` if required.
 3. Configure the build with `cmake -B build -DENABLE_VULKAN=ON` (and `-DUSE_VKFFT=ON` if needed).
 4. Run `pre-commit run --all-files` using the provided `.pre-commit-config.yaml`.
 5. Use `aqua.yaml` to keep lint/format tooling consistent via Aqua CLI.
@@ -50,7 +50,8 @@ build/     : Build artifacts
 
 ### Bundled filters (Issue #7)
 - `data/coefficients/` ships 44k/48k families with ratios 2x/4x/8x/16x (minimum-phase, 80k taps).
-- Regenerate: `uv run python -m scripts.filters.generate_minimum_phase --generate-all --taps 80000`
+- Regenerate: `uv run python -m scripts.filters.generate_minimum_phase --generate-all --taps 80000 --kaiser-beta 25 --stopband-attenuation 140`
+- Target: Kaiser β=25, stopband attenuation 140 dB (temporary for 80k taps)
 - License/notes: generated coefficients follow this repository's license; no third-party datasets are embedded.
 
 ### References & next steps
@@ -77,7 +78,7 @@ build/     : Build artifacts
 
 ### セットアップの概要
 1. `uv sync` で Python/C++/Vulkan 関連依存を整理（`uv.lock` を再利用）
-2. 必要に応じて `uv run python -m scripts.filters.generate_minimum_phase --generate-all --taps 80000` でフィルタを生成
+2. 必要に応じて `uv run python -m scripts.filters.generate_minimum_phase --generate-all --taps 80000 --kaiser-beta 25 --stopband-attenuation 140` でフィルタを生成
 3. `cmake -B build -DENABLE_VULKAN=ON`（必要に応じて `-DUSE_VKFFT=ON`）でビルド設定を作成
 4. `.pre-commit-config.yaml` で `pre-commit run --all-files` を実行
 5. `aqua.yaml` を使って Aqua CLI で lint/format を統一
@@ -113,7 +114,8 @@ build/     : ビルドアウトプット
 
 ### 同梱フィルタ (Issue #7)
 - `data/coefficients/` に 44k/48k の各ファミリ × 2/4/8/16x（最小位相、80kタップ）を同梱
-- 再生成: `uv run python -m scripts.filters.generate_minimum_phase --generate-all --taps 80000`
+- 再生成: `uv run python -m scripts.filters.generate_minimum_phase --generate-all --taps 80000 --kaiser-beta 25 --stopband-attenuation 140`
+- 目標: Kaiser β=25, 阻止帯域減衰 140 dB（80kタップ暫定）
 - ライセンス/注意: 係数は本リポジトリのライセンスに従い、外部データセットは含まれません
 
 ### 参照と今後の流れ
