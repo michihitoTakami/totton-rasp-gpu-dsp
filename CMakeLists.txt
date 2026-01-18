@@ -75,6 +75,16 @@ endif()
 
 if(ENABLE_ALSA)
     find_package(ALSA REQUIRED)
+
+    # Auto-negotiation library (Issue #12)
+    add_library(auto_negotiation
+        src/audio/auto_negotiation.cpp
+        src/io/dac_capability.cpp
+    )
+    target_include_directories(auto_negotiation PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+    target_link_libraries(auto_negotiation PUBLIC ALSA::ALSA)
+    target_compile_features(auto_negotiation PUBLIC cxx_std_17)
+
     add_library(alsa_utils
         src/alsa/alsa_common.cpp
         src/alsa/alsa_filter_selector.cpp
@@ -103,6 +113,13 @@ if(ENABLE_ALSA)
         tests/cpp/test_alsa_streamer_e2e.cpp
     )
     add_test(NAME alsa_streamer_e2e COMMAND alsa_streamer_e2e)
+
+    # Auto-negotiation tests (Issue #12)
+    add_executable(auto_negotiation_smoke
+        tests/cpp/audio/test_auto_negotiation.cpp
+    )
+    target_link_libraries(auto_negotiation_smoke PRIVATE auto_negotiation)
+    add_test(NAME auto_negotiation_smoke COMMAND auto_negotiation_smoke)
 endif()
 
 if(ENABLE_ZMQ)
