@@ -7,9 +7,7 @@ from pathlib import Path
 WEB_DIR = Path(__file__).parent
 PROJECT_ROOT = WEB_DIR.parent
 CONFIG_PATH = Path(os.environ.get("TOTTON_CONFIG_PATH", PROJECT_ROOT / "config.json"))
-EQ_PROFILES_DIR = Path(
-    os.environ.get("TOTTON_EQ_DIR", PROJECT_ROOT / "data" / "EQ")
-)
+EQ_PROFILES_DIR = Path(os.environ.get("TOTTON_EQ_DIR", PROJECT_ROOT / "data" / "EQ"))
 
 ZEROMQ_IPC_PATH = os.environ.get("TOTTON_ZMQ_ENDPOINT", "ipc:///tmp/totton_zmq.sock")
 STATS_FILE_PATH = Path(
