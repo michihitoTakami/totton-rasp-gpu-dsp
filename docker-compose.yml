@@ -1,0 +1,39 @@
+services:
+  totton-dsp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: totton-dsp
+    devices:
+      - "/dev/snd:/dev/snd"
+      - "/dev/dri:/dev/dri"
+    group_add:
+      - "audio"
+      - "video"
+    environment:
+      TOTTON_CONFIG_PATH: /var/lib/totton-dsp/config.json
+      TOTTON_EQ_DIR: /var/lib/totton-dsp/eq
+      TOTTON_ZMQ_ENDPOINT: ipc:///tmp/totton_zmq.sock
+      TOTTON_ZMQ_PUB_ENDPOINT: ipc:///tmp/totton_zmq_pub.sock
+      TOTTON_STATS_PATH: /tmp/gpu_upsampler_stats.json
+      TOTTON_WEB_PORT: 8080
+      TOTTON_ALSA_IN: ${TOTTON_ALSA_IN:-hw:0,0}
+      TOTTON_ALSA_OUT: ${TOTTON_ALSA_OUT:-hw:0,0}
+      TOTTON_ALSA_CHANNELS: ${TOTTON_ALSA_CHANNELS:-2}
+      TOTTON_ALSA_FORMAT: ${TOTTON_ALSA_FORMAT:-S32_LE}
+      TOTTON_FILTER_DIR: ${TOTTON_FILTER_DIR:-/opt/totton-dsp/data/coefficients}
+      TOTTON_FILTER_RATIO: ${TOTTON_FILTER_RATIO:-2}
+      TOTTON_FILTER_PHASE: ${TOTTON_FILTER_PHASE:-min}
+    volumes:
+      - totton-dsp-data:/var/lib/totton-dsp
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  totton-dsp-data:
