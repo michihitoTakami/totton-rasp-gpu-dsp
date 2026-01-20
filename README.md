@@ -19,6 +19,39 @@ This repository hosts the minimal GPU upsampler that migrates Vulkan+EQ+FastAPI/
 4. Run `pre-commit run --all-files` using the provided `.pre-commit-config.yaml`.
 5. Use `aqua.yaml` to keep lint/format tooling consistent via Aqua CLI.
 
+### Docker deployment (Issue #9)
+- Build image: `docker compose build`
+- Start: `docker compose up -d`
+- Web UI: `http://<pi-host>:8080`
+- Persistent config/EQ data: stored in Docker volume at `/var/lib/totton-dsp`
+- Logs: `docker compose logs -f totton-dsp` or `docker logs -f totton-dsp`
+
+Environment overrides (use `.env` or export):
+- `TOTTON_ALSA_IN` / `TOTTON_ALSA_OUT` (default: `hw:0,0`)
+- `TOTTON_ALSA_CHANNELS` / `TOTTON_ALSA_FORMAT` (default: `2` / `S32_LE`)
+- `TOTTON_FILTER_DIR` / `TOTTON_FILTER_RATIO` / `TOTTON_FILTER_PHASE`
+- `TOTTON_WEB_PORT` (default: `8080`)
+
+Auto-start on boot (example systemd unit running docker compose):
+```ini
+[Unit]
+Description=Totton DSP Docker Compose
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/totton-rasp-gpu-dsp
+ExecStart=/usr/bin/docker compose up -d
+ExecStop=/usr/bin/docker compose down
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+```
+Enable with:
+`sudo systemctl enable docker` and `sudo systemctl enable --now totton-dsp.service`
+
 ### Expected outcomes
 - Bundle binaries, filters, and configuration examples into the Pi (arm64) release
 - Enable EQ application, config tweaks, and RELOAD via both the UI and the ZeroMQ API
@@ -82,6 +115,39 @@ build/     : Build artifacts
 3. `cmake -B build -DENABLE_VULKAN=ON`（必要に応じて `-DUSE_VKFFT=ON`）でビルド設定を作成
 4. `.pre-commit-config.yaml` で `pre-commit run --all-files` を実行
 5. `aqua.yaml` を使って Aqua CLI で lint/format を統一
+
+### Dockerデプロイ (Issue #9)
+- ビルド: `docker compose build`
+- 起動: `docker compose up -d`
+- Web UI: `http://<pi-host>:8080`
+- 設定/EQ 永続化: Docker Volume により `/var/lib/totton-dsp` に保存
+- ログ: `docker compose logs -f totton-dsp` または `docker logs -f totton-dsp`
+
+環境変数の上書き（`.env` か export で設定）:
+- `TOTTON_ALSA_IN` / `TOTTON_ALSA_OUT`（既定: `hw:0,0`）
+- `TOTTON_ALSA_CHANNELS` / `TOTTON_ALSA_FORMAT`（既定: `2` / `S32_LE`）
+- `TOTTON_FILTER_DIR` / `TOTTON_FILTER_RATIO` / `TOTTON_FILTER_PHASE`
+- `TOTTON_WEB_PORT`（既定: `8080`）
+
+自動起動（docker compose を起動する systemd 例）:
+```ini
+[Unit]
+Description=Totton DSP Docker Compose
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/totton-rasp-gpu-dsp
+ExecStart=/usr/bin/docker compose up -d
+ExecStop=/usr/bin/docker compose down
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+```
+有効化:
+`sudo systemctl enable docker` と `sudo systemctl enable --now totton-dsp.service`
 
 ### 期待する成果
 - Pi (arm64) 向けリリースにバイナリ・フィルタ・設定例を添付
