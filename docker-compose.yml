@@ -1,8 +1,13 @@
 services:
   totton-dsp:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    # Use pre-built image from GHCR (recommended)
+    image: ghcr.io/michihitotakami/totton-rasp-gpu-dsp:latest
+
+    # Or build locally (uncomment the lines below and comment out the image line above)
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile
+
     container_name: totton-dsp
     devices:
       - "/dev/snd:/dev/snd"

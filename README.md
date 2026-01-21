@@ -19,12 +19,35 @@ This repository hosts the minimal GPU upsampler that migrates Vulkan+EQ+FastAPI/
 4. Run `pre-commit run --all-files` using the provided `.pre-commit-config.yaml`.
 5. Use `aqua.yaml` to keep lint/format tooling consistent via Aqua CLI.
 
-### Docker deployment (Issue #9)
-- Build image: `docker compose build`
+### Docker deployment (Issue #9, #23)
+Pre-built images are available on GitHub Container Registry (GHCR). No build step required on Raspberry Pi.
+
+**Quick start:**
+```bash
+git clone https://github.com/michihitoTakami/totton-rasp-gpu-dsp.git
+cd totton-rasp-gpu-dsp
+docker compose up -d
+```
+
+The `docker-compose.yml` automatically pulls the latest image from GHCR.
+
+**Manual image pull:**
+```bash
+docker pull ghcr.io/michihitotakami/totton-rasp-gpu-dsp:latest
+```
+
+**Management:**
 - Start: `docker compose up -d`
+- Stop: `docker compose down`
 - Web UI: `http://<pi-host>:8080`
 - Persistent config/EQ data: stored in Docker volume at `/var/lib/totton-dsp`
 - Logs: `docker compose logs -f totton-dsp` or `docker logs -f totton-dsp`
+
+**Build locally (optional):**
+If you want to build the image yourself instead of using pre-built images:
+```bash
+docker compose build
+```
 
 Environment overrides (use `.env` or export):
 - `TOTTON_ALSA_IN` / `TOTTON_ALSA_OUT` (default: `hw:0,0`)
@@ -116,12 +139,35 @@ build/     : Build artifacts
 4. `.pre-commit-config.yaml` で `pre-commit run --all-files` を実行
 5. `aqua.yaml` を使って Aqua CLI で lint/format を統一
 
-### Dockerデプロイ (Issue #9)
-- ビルド: `docker compose build`
+### Dockerデプロイ (Issue #9, #23)
+ビルド済みのイメージが GitHub Container Registry (GHCR) で公開されています。Raspberry Pi でのビルドは不要です。
+
+**クイックスタート:**
+```bash
+git clone https://github.com/michihitoTakami/totton-rasp-gpu-dsp.git
+cd totton-rasp-gpu-dsp
+docker compose up -d
+```
+
+`docker-compose.yml` が自動的に GHCR から最新イメージを取得します。
+
+**手動でイメージを取得:**
+```bash
+docker pull ghcr.io/michihitotakami/totton-rasp-gpu-dsp:latest
+```
+
+**管理コマンド:**
 - 起動: `docker compose up -d`
+- 停止: `docker compose down`
 - Web UI: `http://<pi-host>:8080`
 - 設定/EQ 永続化: Docker Volume により `/var/lib/totton-dsp` に保存
 - ログ: `docker compose logs -f totton-dsp` または `docker logs -f totton-dsp`
+
+**ローカルビルド（オプション）:**
+ビルド済みイメージを使わず、自分でビルドする場合:
+```bash
+docker compose build
+```
 
 環境変数の上書き（`.env` か export で設定）:
 - `TOTTON_ALSA_IN` / `TOTTON_ALSA_OUT`（既定: `hw:0,0`）
