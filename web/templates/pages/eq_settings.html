@@ -6,7 +6,7 @@
 {% block content %}
 <div x-data="eqApp()" x-init="init()">
   <header class="page-header">
-    <h1 class="page-title">Magic Box Control</h1>
+    <h1 class="page-title">Totton Audio Control</h1>
     <p class="page-subtitle">EQ control, phase switching, and live DSP status.</p>
   </header>
 
@@ -48,8 +48,8 @@
           <div class="mono" x-text="phaseType"></div>
         </div>
         <div class="profile-actions">
-          {{ buttons.btn_primary('Minimum', click="setPhase('minimum')", disabled="actionPending || phaseType === 'minimum'", attrs=':class="phaseType === \\'minimum\\' ? \\'\\' : \\'btn-secondary\\''") }}
-          {{ buttons.btn_primary('Linear', click="setPhase('linear')", disabled="actionPending || phaseType === 'linear'", attrs=':class="phaseType === \\'linear\\' ? \\'\\' : \\'btn-secondary\\''") }}
+          {{ buttons.btn_primary('Minimum', click="setPhase('minimum')", disabled="actionPending || phaseType === 'minimum'", attrs=":class=\"phaseType === 'minimum' ? '' : 'btn-secondary'\"") }}
+          {{ buttons.btn_primary('Linear', click="setPhase('linear')", disabled="actionPending || phaseType === 'linear'", attrs=":class=\"phaseType === 'linear' ? '' : 'btn-secondary'\"") }}
         </div>
       </div>
       <div class="profile-actions" style="margin-top: 12px;">
