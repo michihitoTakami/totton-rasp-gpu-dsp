@@ -44,7 +44,10 @@ if(ENABLE_VULKAN)
             GIT_REPOSITORY https://github.com/DTolm/VkFFT.git
             GIT_TAG v1.3.1
         )
-        FetchContent_MakeAvailable(vkfft)
+        FetchContent_GetProperties(vkfft)
+        if(NOT vkfft_POPULATED)
+            FetchContent_Populate(vkfft)
+        endif()
         target_compile_definitions(vulkan_upsampler PRIVATE USE_VKFFT=1 VKFFT_BACKEND=0)
         target_include_directories(vulkan_upsampler PRIVATE ${vkfft_SOURCE_DIR})
     endif()
