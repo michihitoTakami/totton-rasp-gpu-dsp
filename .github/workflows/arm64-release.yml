@@ -43,7 +43,8 @@ jobs:
               -DENABLE_OPT=0 \
               -DENABLE_ALSA=ON \
               -DENABLE_ZMQ=ON
-            cmake --build build -j$(nproc)
+            # QEMU 環境のリンク時クラッシュ回避のため並列数を抑える
+            cmake --build build -j2
 
       - name: Package release bundle
         if: startsWith(github.ref, 'refs/tags/')
