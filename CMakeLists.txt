@@ -6,6 +6,7 @@ option(USE_VKFFT "Use VkFFT backend when Vulkan is enabled" ON)
 option(ENABLE_ALSA "Enable ALSA streaming app" ON)
 option(ENABLE_ZMQ "Enable ZeroMQ control server" ON)
 option(ENABLE_OPT "Enable compiler optimizations" ON)
+option(ENABLE_TESTS "Build test binaries" ON)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -36,7 +37,9 @@ target_include_directories(audio_eq
 )
 target_compile_features(audio_eq PUBLIC cxx_std_17)
 
-enable_testing()
+if(ENABLE_TESTS)
+    enable_testing()
+endif()
 
 if(ENABLE_VULKAN)
     find_package(Vulkan REQUIRED)
@@ -59,27 +62,29 @@ if(ENABLE_VULKAN)
     endif()
 endif()
 
-add_executable(upsampler_smoke
-    tests/cpp/test_vulkan_upsampler.cpp
-)
-target_link_libraries(upsampler_smoke PRIVATE vulkan_upsampler)
-add_test(NAME upsampler_smoke COMMAND upsampler_smoke)
+if(ENABLE_TESTS)
+    add_executable(upsampler_smoke
+        tests/cpp/test_vulkan_upsampler.cpp
+    )
+    target_link_libraries(upsampler_smoke PRIVATE vulkan_upsampler)
+    add_test(NAME upsampler_smoke COMMAND upsampler_smoke)
 
-add_executable(eq_parser_smoke
-    tests/cpp/test_eq_parser_smoke.cpp
-)
-target_link_libraries(eq_parser_smoke PRIVATE audio_eq)
-add_test(NAME eq_parser_smoke COMMAND eq_parser_smoke)
+    add_executable(eq_parser_smoke
+        tests/cpp/test_eq_parser_smoke.cpp
+    )
+    target_link_libraries(eq_parser_smoke PRIVATE audio_eq)
+    add_test(NAME eq_parser_smoke COMMAND eq_parser_smoke)
 
-add_executable(eq_to_fir_smoke
-    tests/cpp/test_eq_to_fir_smoke.cpp
-)
-target_link_libraries(eq_to_fir_smoke PRIVATE audio_eq)
-add_test(NAME eq_to_fir_smoke COMMAND eq_to_fir_smoke)
+    add_executable(eq_to_fir_smoke
+        tests/cpp/test_eq_to_fir_smoke.cpp
+    )
+    target_link_libraries(eq_to_fir_smoke PRIVATE audio_eq)
+    add_test(NAME eq_to_fir_smoke COMMAND eq_to_fir_smoke)
 
-if(ENABLE_VULKAN)
-    target_compile_definitions(upsampler_smoke PRIVATE ENABLE_VULKAN=1)
-    target_link_libraries(upsampler_smoke PRIVATE Vulkan::Vulkan)
+    if(ENABLE_VULKAN)
+        target_compile_definitions(upsampler_smoke PRIVATE ENABLE_VULKAN=1)
+        target_link_libraries(upsampler_smoke PRIVATE Vulkan::Vulkan)
+    endif()
 endif()
 
 if(ENABLE_ALSA)
@@ -106,29 +111,31 @@ if(ENABLE_ALSA)
     )
     target_link_libraries(alsa_streamer PRIVATE vulkan_upsampler alsa_utils)
 
-    add_executable(alsa_common_smoke
-        tests/cpp/test_alsa_common.cpp
-    )
-    target_link_libraries(alsa_common_smoke PRIVATE alsa_utils)
-    add_test(NAME alsa_common_smoke COMMAND alsa_common_smoke)
+    if(ENABLE_TESTS)
+        add_executable(alsa_common_smoke
+            tests/cpp/test_alsa_common.cpp
+        )
+        target_link_libraries(alsa_common_smoke PRIVATE alsa_utils)
+        add_test(NAME alsa_common_smoke COMMAND alsa_common_smoke)
 
-    add_executable(alsa_filter_selector_smoke
-        tests/cpp/test_alsa_filter_selector.cpp
-    )
-    target_link_libraries(alsa_filter_selector_smoke PRIVATE alsa_utils)
-    add_test(NAME alsa_filter_selector_smoke COMMAND alsa_filter_selector_smoke)
+        add_executable(alsa_filter_selector_smoke
+            tests/cpp/test_alsa_filter_selector.cpp
+        )
+        target_link_libraries(alsa_filter_selector_smoke PRIVATE alsa_utils)
+        add_test(NAME alsa_filter_selector_smoke COMMAND alsa_filter_selector_smoke)
 
-    add_executable(alsa_streamer_e2e
-        tests/cpp/test_alsa_streamer_e2e.cpp
-    )
-    add_test(NAME alsa_streamer_e2e COMMAND alsa_streamer_e2e)
+        add_executable(alsa_streamer_e2e
+            tests/cpp/test_alsa_streamer_e2e.cpp
+        )
+        add_test(NAME alsa_streamer_e2e COMMAND alsa_streamer_e2e)
 
-    # Auto-negotiation tests (Issue #12)
-    add_executable(auto_negotiation_smoke
-        tests/cpp/audio/test_auto_negotiation.cpp
-    )
-    target_link_libraries(auto_negotiation_smoke PRIVATE auto_negotiation)
-    add_test(NAME auto_negotiation_smoke COMMAND auto_negotiation_smoke)
+        # Auto-negotiation tests (Issue #12)
+        add_executable(auto_negotiation_smoke
+            tests/cpp/audio/test_auto_negotiation.cpp
+        )
+        target_link_libraries(auto_negotiation_smoke PRIVATE auto_negotiation)
+        add_test(NAME auto_negotiation_smoke COMMAND auto_negotiation_smoke)
+    endif()
 endif()
 
 if(ENABLE_ZMQ)
@@ -150,10 +157,12 @@ if(ENABLE_ZMQ)
     )
     target_link_libraries(zmq_control_server PRIVATE zmq_command_server)
 
-    add_executable(zmq_server_e2e
-        tests/cpp/test_zmq_server_e2e.cpp
-    )
-    target_include_directories(zmq_server_e2e PRIVATE ${LIBZMQ_INCLUDE_DIRS})
-    target_link_libraries(zmq_server_e2e PRIVATE ${LIBZMQ_LIBRARIES})
-    add_test(NAME zmq_server_e2e COMMAND zmq_server_e2e)
+    if(ENABLE_TESTS)
+        add_executable(zmq_server_e2e
+            tests/cpp/test_zmq_server_e2e.cpp
+        )
+        target_include_directories(zmq_server_e2e PRIVATE ${LIBZMQ_INCLUDE_DIRS})
+        target_link_libraries(zmq_server_e2e PRIVATE ${LIBZMQ_LIBRARIES})
+        add_test(NAME zmq_server_e2e COMMAND zmq_server_e2e)
+    endif()
 endif()
