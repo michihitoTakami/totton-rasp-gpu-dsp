@@ -8,4 +8,4 @@ def test_eq_settings_template_renders():
     response = client.get("/")
 
     assert response.status_code == 200
-    assert "Magic Box Control" in response.text
+    assert "Totton Audio Control" in response.text
