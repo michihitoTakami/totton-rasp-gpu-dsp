@@ -18,7 +18,7 @@ WORKDIR /opt/totton-dsp
 COPY . .
 
 RUN cmake -B build -DCMAKE_BUILD_TYPE=Release -DENABLE_VULKAN=ON -DUSE_VKFFT=ON \
-    -DENABLE_ALSA=ON -DENABLE_ZMQ=ON \
+    -DENABLE_OPT=0 -DENABLE_ALSA=ON -DENABLE_ZMQ=ON \
     && cmake --build build -j"$(nproc)"
 
 FROM debian:12-slim
