@@ -5,9 +5,15 @@ option(ENABLE_VULKAN "Enable Vulkan upsampler" ON)
 option(USE_VKFFT "Use VkFFT backend when Vulkan is enabled" ON)
 option(ENABLE_ALSA "Enable ALSA streaming app" ON)
 option(ENABLE_ZMQ "Enable ZeroMQ control server" ON)
+option(ENABLE_OPT "Enable compiler optimizations" ON)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+if(NOT ENABLE_OPT)
+    # Disable optimization when running under emulation to avoid GCC ICE.
+    add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-O0>)
+endif()
 
 add_library(vulkan_upsampler
     src/vulkan/vulkan_streaming_upsampler.cpp
