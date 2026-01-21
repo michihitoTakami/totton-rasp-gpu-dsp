@@ -48,8 +48,8 @@
           <div class="mono" x-text="phaseType"></div>
         </div>
         <div class="profile-actions">
-          {{ buttons.btn_primary('Minimum', click="setPhase('minimum')", disabled="actionPending || phaseType === 'minimum'", attrs=':class="phaseType === \\'minimum\\' ? \\'\\' : \\'btn-secondary\\''") }}
-          {{ buttons.btn_primary('Linear', click="setPhase('linear')", disabled="actionPending || phaseType === 'linear'", attrs=':class="phaseType === \\'linear\\' ? \\'\\' : \\'btn-secondary\\''") }}
+          {{ buttons.btn_primary('Minimum', click="setPhase('minimum')", disabled="actionPending || phaseType === 'minimum'", attrs=":class=\"phaseType === 'minimum' ? '' : 'btn-secondary'\"") }}
+          {{ buttons.btn_primary('Linear', click="setPhase('linear')", disabled="actionPending || phaseType === 'linear'", attrs=":class=\"phaseType === 'linear' ? '' : 'btn-secondary'\"") }}
         </div>
       </div>
       <div class="profile-actions" style="margin-top: 12px;">
