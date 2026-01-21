@@ -38,9 +38,13 @@ services:
         max-size: "10m"
         max-file: "3"
   totton-web:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    # Use pre-built image from GHCR (recommended)
+    image: ghcr.io/michihitotakami/totton-rasp-gpu-dsp:latest
+
+    # Or build locally (uncomment the lines below and comment out the image line above)
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile
     container_name: totton-web
     depends_on:
       - totton-dsp
