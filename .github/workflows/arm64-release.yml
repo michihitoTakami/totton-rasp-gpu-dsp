@@ -29,7 +29,6 @@ jobs:
               build-essential \
               ca-certificates \
               cmake \
-              libcppzmq-dev \
               git \
               libasound2-dev \
               libvulkan-dev \
