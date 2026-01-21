@@ -11,6 +11,7 @@ RUN apt-get update \
         python3-pip \
         libasound2-dev \
         libzmq3-dev \
+        libcppzmq-dev \
         libvulkan-dev \
     && rm -rf /var/lib/apt/lists/*
 
