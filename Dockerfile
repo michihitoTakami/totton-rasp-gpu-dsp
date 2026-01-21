@@ -20,6 +20,7 @@ COPY build/alsa_streamer /usr/local/bin/alsa_streamer
 COPY build/zmq_control_server /usr/local/bin/zmq_control_server
 COPY web /opt/totton-dsp/web
 COPY data /opt/totton-dsp/data
+COPY scripts /opt/totton-dsp/scripts
 COPY docker/entrypoint.sh /usr/local/bin/totton-entrypoint.sh
 
 RUN pip3 install --no-cache-dir \
