@@ -291,8 +291,7 @@ int main(int argc, char **argv) {
   std::size_t upsampleFactor = 1;
   if (filterConfig) {
     upsampleFactor = std::max<std::size_t>(filterConfig->upsampleFactor, 1);
-    outputRate =
-        static_cast<unsigned int>(capture->rate * upsampleFactor);
+    outputRate = static_cast<unsigned int>(capture->rate * upsampleFactor);
   }
 
   const auto outputFrames =
