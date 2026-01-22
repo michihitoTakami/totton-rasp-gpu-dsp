@@ -1,0 +1,83 @@
+{
+  "hooks": [
+    {
+      "name": "git-push-review",
+      "description": "Warn before pushing to remote repository",
+      "type": "PreToolUse",
+      "tool": "Bash",
+      "pattern": "git push.*",
+      "script": ".claude/hooks/scripts/pre-tooluse/git-push-review.sh",
+      "enabled": true
+    },
+    {
+      "name": "long-running-reminder",
+      "description": "Warn before executing potentially long-running commands",
+      "type": "PreToolUse",
+      "tool": "Bash",
+      "pattern": "(docker build|npm install|cmake --build|cargo build).*",
+      "script": ".claude/hooks/scripts/pre-tooluse/long-running-reminder.sh",
+      "enabled": true
+    },
+    {
+      "name": "doc-file-restriction",
+      "description": "Prevent creation of unnecessary documentation files",
+      "type": "PreToolUse",
+      "tool": "Write",
+      "pattern": ".*\\.(md|txt)$",
+      "script": ".claude/hooks/scripts/pre-tooluse/doc-file-restriction.sh",
+      "enabled": true
+    },
+    {
+      "name": "cpp-format",
+      "description": "Auto-format C++ files after editing",
+      "type": "PostToolUse",
+      "tool": "Edit",
+      "pattern": ".*\\.(cpp|cu|h|cuh|hpp)$",
+      "script": ".claude/hooks/scripts/post-tooluse/cpp-format.sh",
+      "enabled": true
+    },
+    {
+      "name": "cpp-format-write",
+      "description": "Auto-format C++ files after writing",
+      "type": "PostToolUse",
+      "tool": "Write",
+      "pattern": ".*\\.(cpp|cu|h|cuh|hpp)$",
+      "script": ".claude/hooks/scripts/post-tooluse/cpp-format.sh",
+      "enabled": true
+    },
+    {
+      "name": "python-format",
+      "description": "Auto-format Python files after editing",
+      "type": "PostToolUse",
+      "tool": "Edit",
+      "pattern": ".*\\.py$",
+      "script": ".claude/hooks/scripts/post-tooluse/python-format.sh",
+      "enabled": true
+    },
+    {
+      "name": "python-format-write",
+      "description": "Auto-format Python files after writing",
+      "type": "PostToolUse",
+      "tool": "Write",
+      "pattern": ".*\\.py$",
+      "script": ".claude/hooks/scripts/post-tooluse/python-format.sh",
+      "enabled": true
+    },
+    {
+      "name": "pr-auto-log",
+      "description": "Log PR creation events",
+      "type": "PostToolUse",
+      "tool": "Bash",
+      "pattern": "gh pr create.*",
+      "script": ".claude/hooks/scripts/post-tooluse/pr-auto-log.sh",
+      "enabled": true
+    },
+    {
+      "name": "final-audit",
+      "description": "Perform final checks before session ends",
+      "type": "Stop",
+      "script": ".claude/hooks/scripts/stop/final-audit.sh",
+      "enabled": true
+    }
+  ]
+}
