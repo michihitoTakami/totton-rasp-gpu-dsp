@@ -12,6 +12,34 @@ class Settings(BaseModel):
     eq_enabled: bool = False
     eq_profile: Optional[str] = None
     eq_profile_path: Optional[str] = None
+    alsa_input_device: Optional[str] = None
+    alsa_output_device: Optional[str] = None
+    alsa_sample_rate: Optional[int] = None
+    alsa_channels: Optional[int] = None
+    alsa_format: Optional[str] = None
+
+
+class AlsaDeviceListResponse(BaseModel):
+    """Available ALSA devices."""
+
+    playback: list[str]
+    capture: list[str]
+
+
+class ConfigResponse(BaseModel):
+    """Config response including ALSA settings."""
+
+    settings: Settings
+
+
+class ConfigUpdateRequest(BaseModel):
+    """Update request for config.json."""
+
+    alsa_input_device: Optional[str] = None
+    alsa_output_device: Optional[str] = None
+    alsa_sample_rate: Optional[int] = Field(default=None, ge=0)
+    alsa_channels: Optional[int] = Field(default=None, ge=1)
+    alsa_format: Optional[str] = None
 
 
 class EqProfileInfo(BaseModel):

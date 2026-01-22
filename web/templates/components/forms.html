@@ -1,0 +1,23 @@
+{% macro select_input(id, label, model, options, disabled='false') %}
+  <div class="form-group">
+    <label for="{{ id }}">{{ label }}</label>
+    <select id="{{ id }}" x-model="{{ model }}" :disabled="{{ disabled }}">
+      <template x-for="option in {{ options }}" :key="option.value ?? option">
+        <option :value="option.value ?? option" x-text="option.label ?? option"></option>
+      </template>
+    </select>
+  </div>
+{% endmacro %}
+
+{% macro text_input(id, label, model, type='text', placeholder='', disabled='false') %}
+  <div class="form-group">
+    <label for="{{ id }}">{{ label }}</label>
+    <input
+      id="{{ id }}"
+      type="{{ type }}"
+      x-model="{{ model }}"
+      placeholder="{{ placeholder }}"
+      :disabled="{{ disabled }}"
+    />
+  </div>
+{% endmacro %}

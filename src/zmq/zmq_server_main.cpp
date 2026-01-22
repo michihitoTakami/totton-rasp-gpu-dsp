@@ -5,8 +5,12 @@
 #include <csignal>
 #include <cstdlib>
 #include <iostream>
+#include <sstream>
 #include <string>
 #include <thread>
+#include <vector>
+
+#include "io/dac_capability.h"
 
 namespace {
 
@@ -29,6 +33,46 @@ std::string ExtractPhaseParam(const std::string &raw) {
     totton::zmq_server::ExtractJsonString(raw, "phase_type", &phase);
   }
   return phase;
+}
+
+std::string EscapeJson(const std::string &value) {
+  std::ostringstream out;
+  for (char c : value) {
+    switch (c) {
+    case '\\':
+      out << "\\\\";
+      break;
+    case '"':
+      out << "\\\"";
+      break;
+    case '\n':
+      out << "\\n";
+      break;
+    case '\r':
+      out << "\\r";
+      break;
+    case '\t':
+      out << "\\t";
+      break;
+    default:
+      out << c;
+      break;
+    }
+  }
+  return out.str();
+}
+
+std::string BuildJsonArray(const std::vector<std::string> &values) {
+  std::ostringstream out;
+  out << "[";
+  for (std::size_t i = 0; i < values.size(); ++i) {
+    if (i > 0) {
+      out << ",";
+    }
+    out << "\"" << EscapeJson(values[i]) << "\"";
+  }
+  out << "]";
+  return out.str();
 }
 
 void PrintUsage(const char *argv0) {
@@ -142,6 +186,18 @@ int main(int argc, char **argv) {
         return totton::zmq_server::ZmqResponse{
             totton::zmq_server::ZmqCommandServer::BuildOk(data)};
       });
+
+  auto listDevicesHandler = [&](const totton::zmq_server::ZmqRequest &) {
+    const auto playback = DacCapability::listPlaybackDevices();
+    const auto capture = DacCapability::listCaptureDevices();
+    std::string data = "{\"playback\":" + BuildJsonArray(playback) +
+                       ",\"capture\":" + BuildJsonArray(capture) + "}";
+    return totton::zmq_server::ZmqResponse{
+        totton::zmq_server::ZmqCommandServer::BuildOk(data)};
+  };
+
+  server.Register("LIST_ALSA_DEVICES", listDevicesHandler);
+  server.Register("list_alsa_devices", listDevicesHandler);
 
   server.Register("SHUTDOWN", [&](const totton::zmq_server::ZmqRequest &) {
     gRunning.store(false);

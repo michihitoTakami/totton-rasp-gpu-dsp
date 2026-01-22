@@ -1,0 +1,125 @@
+{% extends "layout.html" %}
+{% import "components/buttons.html" as buttons %}
+{% import "components/card_panel.html" as panels %}
+{% import "components/forms.html" as forms %}
+
+{% block content %}
+<div x-data="alsaSettingsApp()" x-init="init()">
+  <header class="page-header">
+    <h1 class="page-title">ALSA Device Settings</h1>
+    <p class="page-subtitle">Select capture/playback devices and persist settings.</p>
+  </header>
+
+  <div class="grid grid-2">
+    {% call panels.card_panel("Device Selection") %}
+      {{ forms.select_input('alsaInput', 'Input Device', 'config.input_device', 'devices.capture') }}
+      {{ forms.select_input('alsaOutput', 'Output Device', 'config.output_device', 'devices.playback') }}
+      <div class="notice" x-show="!devices.capture.length || !devices.playback.length">
+        Device list is empty or unavailable. Ensure the DSP daemon is running.
+      </div>
+    {% endcall %}
+
+    {% call panels.card_panel("Stream Parameters") %}
+      {{ forms.text_input('alsaRate', 'Sample Rate (Hz)', 'config.sample_rate', type='number', placeholder='Auto') }}
+      {{ forms.text_input('alsaChannels', 'Channels', 'config.channels', type='number', placeholder='2') }}
+      {{ forms.select_input('alsaFormat', 'Format', 'config.format', 'formatOptions') }}
+    {% endcall %}
+  </div>
+
+  {% call panels.card_panel("Apply Settings") %}
+    <div class="profile-actions">
+      {{ buttons.btn_primary('Save & Apply', click='saveConfig()', disabled='actionPending') }}
+      {{ buttons.btn_primary('Reload Devices', click='fetchDevices()', disabled='actionPending', extra_class='btn-secondary') }}
+      {{ buttons.btn_primary('Refresh Config', click='fetchConfig()', disabled='actionPending', extra_class='btn-secondary') }}
+    </div>
+    <div class="notice success" x-show="actionMessage" x-text="actionMessage" style="margin-top: 16px;"></div>
+    <div class="notice error" x-show="actionError" x-text="actionError" style="margin-top: 16px;"></div>
+  {% endcall %}
+</div>
+
+<script>
+function alsaSettingsApp() {
+  return {
+    devices: { playback: [], capture: [] },
+    formatOptions: ['S16_LE', 'S24_3LE', 'S32_LE'],
+    config: {
+      input_device: '',
+      output_device: '',
+      sample_rate: '',
+      channels: '',
+      format: 'S32_LE'
+    },
+    actionPending: false,
+    actionMessage: null,
+    actionError: null,
+    init() {
+      this.fetchDevices();
+      this.fetchConfig();
+    },
+    async fetchDevices() {
+      try {
+        const response = await fetch('/api/alsa/devices');
+        if (!response.ok) {
+          throw new Error('Failed to load devices');
+        }
+        const data = await response.json();
+        this.devices.playback = data.playback || [];
+        this.devices.capture = data.capture || [];
+      } catch (err) {
+        this.actionError = err.message;
+      }
+    },
+    async fetchConfig() {
+      try {
+        const response = await fetch('/api/config');
+        if (!response.ok) {
+          throw new Error('Failed to load config');
+        }
+        const data = await response.json();
+        const settings = data.settings || {};
+        this.config.input_device = settings.alsa_input_device || '';
+        this.config.output_device = settings.alsa_output_device || '';
+        this.config.sample_rate = settings.alsa_sample_rate || '';
+        this.config.channels = settings.alsa_channels || '';
+        this.config.format = settings.alsa_format || this.config.format;
+      } catch (err) {
+        this.actionError = err.message;
+      }
+    },
+    async saveConfig() {
+      this.actionPending = true;
+      this.actionMessage = null;
+      this.actionError = null;
+      const payload = {
+        alsa_input_device: this.config.input_device || null,
+        alsa_output_device: this.config.output_device || null,
+        alsa_sample_rate: this.config.sample_rate ? Number(this.config.sample_rate) : null,
+        alsa_channels: this.config.channels ? Number(this.config.channels) : null,
+        alsa_format: this.config.format || null
+      };
+      try {
+        const response = await fetch('/api/config', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (!response.ok) {
+          const err = await response.json();
+          throw new Error(err.detail || 'Failed to save config');
+        }
+        const data = await response.json();
+        if (data.restart_required) {
+          this.actionMessage = 'Saved. Restart required to apply ALSA changes.';
+        } else {
+          this.actionMessage = 'Saved and applied.';
+        }
+      } catch (err) {
+        this.actionError = err.message;
+      } finally {
+        this.actionPending = false;
+      }
+    }
+  };
+}
+</script>
+{% endblock %}

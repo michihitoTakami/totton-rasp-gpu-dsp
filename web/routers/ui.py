@@ -15,3 +15,9 @@ router = APIRouter(tags=["ui"])
 async def eq_settings(request: Request):
     """Render EQ settings page."""
     return TEMPLATES.TemplateResponse("pages/eq_settings.html", {"request": request})
+
+
+@router.get("/settings", response_class=HTMLResponse)
+async def alsa_settings(request: Request):
+    """Render ALSA settings page."""
+    return TEMPLATES.TemplateResponse("pages/settings.html", {"request": request})
