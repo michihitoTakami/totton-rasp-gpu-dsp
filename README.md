@@ -40,6 +40,7 @@ docker pull ghcr.io/michihitotakami/totton-rasp-gpu-dsp:latest
 - Start: `docker compose up -d`
 - Stop: `docker compose down`
 - Web UI: `http://<pi-host>:8080`
+- ALSA settings UI: `http://<pi-host>:8080/settings`
 - Persistent config/EQ data: stored in Docker volume at `/var/lib/totton-dsp`
 - Logs: `docker compose logs -f totton-dsp` or `docker logs -f totton-dsp`
 
@@ -92,6 +93,7 @@ Enable with:
 - Run: `./build/zmq_control_server --endpoint ipc:///tmp/totton_zmq.sock`
 - Env override: `TOTTON_ZMQ_ENDPOINT` / `TOTTON_ZMQ_PUB_ENDPOINT`
 - Commands: `PING`, `STATS`, `RELOAD`, `SOFT_RESET`, `PHASE_TYPE_GET`, `PHASE_TYPE_SET`
+- ALSA device list: `LIST_ALSA_DEVICES`
 
 ### Directory layout
 ```
