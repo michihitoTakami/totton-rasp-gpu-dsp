@@ -178,6 +178,8 @@ body {
 
 input[type="file"],
 input[type="text"],
+input[type="number"],
+select,
 textarea {
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--border);

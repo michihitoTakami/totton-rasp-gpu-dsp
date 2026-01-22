@@ -156,6 +156,9 @@ if(ENABLE_ZMQ)
         src/zmq/zmq_server_main.cpp
     )
     target_link_libraries(zmq_control_server PRIVATE zmq_command_server)
+    if(ENABLE_ALSA)
+        target_link_libraries(zmq_control_server PRIVATE auto_negotiation)
+    endif()
 
     if(ENABLE_TESTS)
         add_executable(zmq_server_e2e

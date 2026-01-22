@@ -1,6 +1,6 @@
 """Service exports for Web API."""
 
-from .config import load_config, save_config
+from .config import load_config, save_config, save_config_updates
 from .daemon import check_daemon_running, fetch_zmq_stats, load_stats
 from .daemon_client import get_daemon_client
 from .eq import (
@@ -20,5 +20,6 @@ __all__ = [
     "parse_eq_profile_content",
     "read_and_validate_upload",
     "save_config",
+    "save_config_updates",
     "validate_eq_profile_content",
 ]

@@ -26,6 +26,8 @@ Capability scan(const std::string &device);
 
 // Get list of available ALSA playback devices
 std::vector<std::string> listPlaybackDevices();
+// Get list of available ALSA capture devices
+std::vector<std::string> listCaptureDevices();
 
 // Check if a specific sample rate is supported by the DAC
 bool isRateSupported(const Capability &cap, int sampleRate);

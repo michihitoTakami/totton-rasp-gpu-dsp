@@ -99,6 +99,22 @@ std::vector<std::string> listPlaybackDevices() {
   return devices;
 }
 
+std::vector<std::string> listCaptureDevices() {
+  std::vector<std::string> devices;
+  devices.push_back("default");
+  devices.push_back("hw:0");
+  devices.push_back("plughw:0");
+
+  int card = -1;
+  while (snd_card_next(&card) >= 0 && card >= 0) {
+    std::string hwDevice = "hw:" + std::to_string(card);
+    if (std::find(devices.begin(), devices.end(), hwDevice) == devices.end()) {
+      devices.push_back(hwDevice);
+    }
+  }
+  return devices;
+}
+
 bool isRateSupported(const Capability &cap, int sampleRate) {
   if (!cap.isValid) {
     return false;
