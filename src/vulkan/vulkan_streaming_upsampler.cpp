@@ -107,21 +107,32 @@ std::vector<float> VulkanStreamingUpsampler::ProcessBlock(const float *input,
   if (!initialized_ || !input) {
     return {};
   }
-  if (count == 0 || count != config_.blockSize) {
+  if (count == 0) {
     return {};
   }
 
-  const std::size_t blockSize = config_.blockSize;
+  const std::size_t upsampleFactor =
+      std::max<std::size_t>(config_.upsampleFactor, 1);
+  const std::size_t maxInputSamples =
+      upsampleFactor > 1 ? (config_.blockSize / upsampleFactor)
+                         : config_.blockSize;
+  if (maxInputSamples == 0 || count > maxInputSamples) {
+    return {};
+  }
+
   const std::size_t fftSize = config_.fftSize;
   const std::size_t overlapSize = overlap_.size();
+  const std::size_t upsampledCount = count * upsampleFactor;
+  if (overlapSize + upsampledCount > fftSize) {
+    return {};
+  }
 
   std::vector<float> timeBuffer(fftSize, 0.0f);
   for (std::size_t i = 0; i < overlapSize; ++i) {
     timeBuffer[i] = overlap_[i];
   }
-  const std::size_t copyCount = std::min(count, blockSize);
-  for (std::size_t i = 0; i < copyCount; ++i) {
-    timeBuffer[overlapSize + i] = input[i];
+  for (std::size_t i = 0; i < count; ++i) {
+    timeBuffer[overlapSize + i * upsampleFactor] = input[i];
   }
 
   std::vector<std::complex<float>> freqBuffer(fftSize);
@@ -135,8 +146,8 @@ std::vector<float> VulkanStreamingUpsampler::ProcessBlock(const float *input,
   }
   fft::Fft(freqBuffer, true);
 
-  std::vector<float> output(blockSize, 0.0f);
-  for (std::size_t i = 0; i < blockSize; ++i) {
+  std::vector<float> output(upsampledCount, 0.0f);
+  for (std::size_t i = 0; i < upsampledCount; ++i) {
     output[i] = freqBuffer[overlapSize + i].real();
   }
 
