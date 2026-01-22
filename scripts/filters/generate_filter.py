@@ -200,6 +200,17 @@ class FilterExporter:
         print(f"  保存: {header_path}")
 
     def _export_metadata(self, metadata: dict[str, Any], base_name: str) -> None:
+        # 必須フィールドを追加
+        actual_taps = metadata.get("n_taps_actual", self.config.final_taps)
+        fft_size = 2 ** int(np.ceil(np.log2(actual_taps)))
+        block_size = fft_size - (actual_taps - 1)
+
+        metadata["coefficients_bin"] = f"{base_name}.bin"
+        metadata["taps"] = actual_taps
+        metadata["fft_size"] = fft_size
+        metadata["block_size"] = block_size
+        metadata["upsample_factor"] = self.config.upsample_ratio
+
         metadata_path = self.output_dir / f"{base_name}.json"
 
         # Convert numpy types to native Python types for JSON serialization
