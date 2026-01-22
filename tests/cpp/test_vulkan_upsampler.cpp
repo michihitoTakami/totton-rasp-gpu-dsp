@@ -182,8 +182,7 @@ int main() {
   const auto upsampledOut =
       upsampled.ProcessBlock(impulseInput.data(), impulseInput.size());
   if (upsampledOut.size() != blockSize) {
-    std::cerr << "Unexpected output size (2x): " << upsampledOut.size()
-              << "\n";
+    std::cerr << "Unexpected output size (2x): " << upsampledOut.size() << "\n";
     return 1;
   }
   const auto zeroStuffed = ZeroStuff(impulseInput, 2);
