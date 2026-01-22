@@ -99,7 +99,9 @@ def load_config() -> Settings:
                 )
 
             filter_settings = None
-            if any(value is not None for value in (filter_ratio, filter_phase, filter_dir)):
+            if any(
+                value is not None for value in (filter_ratio, filter_phase, filter_dir)
+            ):
                 filter_settings = FilterSettings(
                     ratio=filter_ratio,
                     phase_type=filter_phase,
