@@ -79,8 +79,8 @@ def compute_metrics(
     denom = np.linalg.norm(ref_mag) * np.linalg.norm(tgt_mag)
     spectral_similarity = float(np.dot(ref_mag, tgt_mag) / denom) if denom else 0.0
 
-    ref_rms = np.sqrt(np.mean(ref ** 2)) + 1e-12
-    tgt_rms = np.sqrt(np.mean(tgt ** 2)) + 1e-12
+    ref_rms = np.sqrt(np.mean(ref**2)) + 1e-12
+    tgt_rms = np.sqrt(np.mean(tgt**2)) + 1e-12
     rms_db = 20.0 * np.log10(tgt_rms / ref_rms)
 
     return corr, spectral_similarity, rms_db

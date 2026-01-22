@@ -7,7 +7,9 @@ import soundfile as sf
 from scipy import signal
 
 
-def generate_sine(freq_hz: float, rate: int, duration: float, amplitude: float) -> np.ndarray:
+def generate_sine(
+    freq_hz: float, rate: int, duration: float, amplitude: float
+) -> np.ndarray:
     t = np.arange(int(rate * duration), dtype=np.float64) / rate
     data = amplitude * np.sin(2.0 * np.pi * freq_hz * t)
     return data
@@ -17,7 +19,9 @@ def generate_sweep(
     start_hz: float, end_hz: float, rate: int, duration: float, amplitude: float
 ) -> np.ndarray:
     t = np.arange(int(rate * duration), dtype=np.float64) / rate
-    data = amplitude * signal.chirp(t, f0=start_hz, f1=end_hz, t1=duration, method="logarithmic")
+    data = amplitude * signal.chirp(
+        t, f0=start_hz, f1=end_hz, t1=duration, method="logarithmic"
+    )
     return data
 
 
@@ -42,7 +46,11 @@ def parse_rates(text: str) -> list[int]:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Generate test audio WAV files.")
     parser.add_argument("--out-dir", required=True, help="Output directory")
-    parser.add_argument("--rates", default="44100,48000,88200,96000", help="Comma-separated sample rates")
+    parser.add_argument(
+        "--rates",
+        default="44100,48000,88200,96000",
+        help="Comma-separated sample rates",
+    )
     parser.add_argument("--duration", type=float, default=3.0, help="Duration seconds")
     parser.add_argument("--amplitude", type=float, default=0.2, help="Signal amplitude")
     parser.add_argument("--channels", type=int, default=2, help="Channel count")
