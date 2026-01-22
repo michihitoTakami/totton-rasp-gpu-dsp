@@ -30,3 +30,4 @@ cp config.example.json config.json
 ## 4. 補足
 - フィルタの仕様は `data/coefficients/README.md` と `docs/filter_format.md` を参照してください。
 - 必要に応じて `config.json` の `eqEnabled` / `eqProfile` を更新してください。
+- ALSAやフィルタ設定は `config.json` の `alsa` / `filter` を更新してください。

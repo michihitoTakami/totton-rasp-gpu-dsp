@@ -28,16 +28,24 @@ async def update_config(request: ConfigUpdateRequest) -> ApiResponse:
     """Update config.json and request streamer reload."""
     updates = request.model_dump(exclude_unset=True)
     config_updates: dict[str, object] = {}
-    if "alsa_input_device" in updates:
-        config_updates["alsaInputDevice"] = updates["alsa_input_device"]
-    if "alsa_output_device" in updates:
-        config_updates["alsaOutputDevice"] = updates["alsa_output_device"]
-    if "alsa_sample_rate" in updates:
-        config_updates["alsaSampleRate"] = updates["alsa_sample_rate"]
-    if "alsa_channels" in updates:
-        config_updates["alsaChannels"] = updates["alsa_channels"]
-    if "alsa_format" in updates:
-        config_updates["alsaFormat"] = updates["alsa_format"]
+    if "alsa" in updates and updates["alsa"] is not None:
+        alsa_payload = updates["alsa"]
+        config_updates["alsa"] = {
+            "inputDevice": alsa_payload.get("input_device"),
+            "outputDevice": alsa_payload.get("output_device"),
+            "sampleRate": alsa_payload.get("sample_rate"),
+            "channels": alsa_payload.get("channels"),
+            "format": alsa_payload.get("format"),
+            "periodFrames": alsa_payload.get("period_frames"),
+            "bufferFrames": alsa_payload.get("buffer_frames"),
+        }
+    if "filter" in updates and updates["filter"] is not None:
+        filter_payload = updates["filter"]
+        config_updates["filter"] = {
+            "ratio": filter_payload.get("ratio"),
+            "phaseType": filter_payload.get("phase_type"),
+            "directory": filter_payload.get("directory"),
+        }
 
     if not save_config_updates(config_updates):
         raise HTTPException(status_code=500, detail="Failed to save config")

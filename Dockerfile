@@ -7,6 +7,7 @@ RUN apt-get update \
         libasound2 \
         libzmq5 \
         libvulkan1 \
+        jq \
         ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 

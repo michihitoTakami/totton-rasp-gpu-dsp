@@ -12,17 +12,25 @@
 
   <div class="grid grid-2">
     {% call panels.card_panel("Device Selection") %}
-      {{ forms.select_input('alsaInput', 'Input Device', 'config.input_device', 'devices.capture') }}
-      {{ forms.select_input('alsaOutput', 'Output Device', 'config.output_device', 'devices.playback') }}
+      {{ forms.select_input('alsaInput', 'Input Device', 'config.alsa.input_device', 'devices.capture') }}
+      {{ forms.select_input('alsaOutput', 'Output Device', 'config.alsa.output_device', 'devices.playback') }}
       <div class="notice" x-show="!devices.capture.length || !devices.playback.length">
         Device list is empty or unavailable. Ensure the DSP daemon is running.
       </div>
     {% endcall %}
 
     {% call panels.card_panel("Stream Parameters") %}
-      {{ forms.text_input('alsaRate', 'Sample Rate (Hz)', 'config.sample_rate', type='number', placeholder='Auto') }}
-      {{ forms.text_input('alsaChannels', 'Channels', 'config.channels', type='number', placeholder='2') }}
-      {{ forms.select_input('alsaFormat', 'Format', 'config.format', 'formatOptions') }}
+      {{ forms.text_input('alsaRate', 'Sample Rate (Hz)', 'config.alsa.sample_rate', type='number', placeholder='Auto') }}
+      {{ forms.text_input('alsaChannels', 'Channels', 'config.alsa.channels', type='number', placeholder='2') }}
+      {{ forms.select_input('alsaFormat', 'Format', 'config.alsa.format', 'formatOptions') }}
+      {{ forms.text_input('alsaPeriod', 'Period Frames', 'config.alsa.period_frames', type='number', placeholder='Auto') }}
+      {{ forms.text_input('alsaBuffer', 'Buffer Frames', 'config.alsa.buffer_frames', type='number', placeholder='Auto') }}
+    {% endcall %}
+
+    {% call panels.card_panel("Filter Settings") %}
+      {{ forms.select_input('filterRatio', 'Upsample Ratio', 'config.filter.ratio', 'ratioOptions') }}
+      {{ forms.select_input('filterPhase', 'Phase Type', 'config.filter.phase_type', 'phaseOptions') }}
+      {{ forms.text_input('filterDir', 'Filter Directory', 'config.filter.directory', placeholder='/opt/totton-dsp/data/coefficients') }}
     {% endcall %}
   </div>
 
@@ -43,12 +51,32 @@ function alsaSettingsApp() {
     devices: { playback: [], capture: [] },
     formatOptions: ['S16_LE', 'S24_3LE', 'S32_LE'],
     config: {
-      input_device: '',
-      output_device: '',
-      sample_rate: '',
-      channels: '',
-      format: 'S32_LE'
+      alsa: {
+        input_device: '',
+        output_device: '',
+        sample_rate: '',
+        channels: '',
+        format: 'S32_LE',
+        period_frames: '',
+        buffer_frames: ''
+      },
+      filter: {
+        ratio: 2,
+        phase_type: 'minimum',
+        directory: ''
+      }
     },
+    ratioOptions: [
+      { label: '1x (Bypass)', value: 1 },
+      { label: '2x', value: 2 },
+      { label: '4x', value: 4 },
+      { label: '8x', value: 8 },
+      { label: '16x', value: 16 }
+    ],
+    phaseOptions: [
+      { label: 'Minimum', value: 'minimum' },
+      { label: 'Linear', value: 'linear' }
+    ],
     actionPending: false,
     actionMessage: null,
     actionError: null,
@@ -77,11 +105,18 @@ function alsaSettingsApp() {
         }
         const data = await response.json();
         const settings = data.settings || {};
-        this.config.input_device = settings.alsa_input_device || '';
-        this.config.output_device = settings.alsa_output_device || '';
-        this.config.sample_rate = settings.alsa_sample_rate || '';
-        this.config.channels = settings.alsa_channels || '';
-        this.config.format = settings.alsa_format || this.config.format;
+        const alsa = settings.alsa || {};
+        const filter = settings.filter || {};
+        this.config.alsa.input_device = alsa.input_device || '';
+        this.config.alsa.output_device = alsa.output_device || '';
+        this.config.alsa.sample_rate = alsa.sample_rate || '';
+        this.config.alsa.channels = alsa.channels || '';
+        this.config.alsa.format = alsa.format || this.config.alsa.format;
+        this.config.alsa.period_frames = alsa.period_frames || '';
+        this.config.alsa.buffer_frames = alsa.buffer_frames || '';
+        this.config.filter.ratio = filter.ratio || this.config.filter.ratio;
+        this.config.filter.phase_type = filter.phase_type || this.config.filter.phase_type;
+        this.config.filter.directory = filter.directory || '';
       } catch (err) {
         this.actionError = err.message;
       }
@@ -91,11 +126,20 @@ function alsaSettingsApp() {
       this.actionMessage = null;
       this.actionError = null;
       const payload = {
-        alsa_input_device: this.config.input_device || null,
-        alsa_output_device: this.config.output_device || null,
-        alsa_sample_rate: this.config.sample_rate ? Number(this.config.sample_rate) : null,
-        alsa_channels: this.config.channels ? Number(this.config.channels) : null,
-        alsa_format: this.config.format || null
+        alsa: {
+          input_device: this.config.alsa.input_device || null,
+          output_device: this.config.alsa.output_device || null,
+          sample_rate: this.config.alsa.sample_rate ? Number(this.config.alsa.sample_rate) : null,
+          channels: this.config.alsa.channels ? Number(this.config.alsa.channels) : null,
+          format: this.config.alsa.format || null,
+          period_frames: this.config.alsa.period_frames ? Number(this.config.alsa.period_frames) : null,
+          buffer_frames: this.config.alsa.buffer_frames ? Number(this.config.alsa.buffer_frames) : null
+        },
+        filter: {
+          ratio: this.config.filter.ratio ? Number(this.config.filter.ratio) : null,
+          phase_type: this.config.filter.phase_type || null,
+          directory: this.config.filter.directory || null
+        }
       };
       try {
         const response = await fetch('/api/config', {
