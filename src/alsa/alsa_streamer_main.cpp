@@ -1,9 +1,11 @@
 #include "alsa/alsa_common.h"
 #include "alsa/alsa_filter_selector.h"
 
+#include <algorithm>
 #include <atomic>
 #include <csignal>
 #include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <optional>
 #include <string>
@@ -16,6 +18,8 @@ namespace {
 struct CliOptions {
   std::string inputDevice;
   std::string outputDevice;
+  std::string inputFile;
+  std::string outputFile;
   std::string filterPath;
   std::string filterDir = "data/coefficients";
   bool filterDirSpecified = false;
@@ -35,8 +39,12 @@ void SignalHandler(int) { gRunning.store(false); }
 
 void PrintUsage(const char *argv0) {
   std::cout
-      << "Usage: " << argv0 << " --in <device> --out <device> [options]\n\n"
+      << "Usage: " << argv0 << " --in <device> --out <device> [options]\n"
+      << "   or: " << argv0
+      << " --in-file <path> --out-file <path> --rate <hz> [options]\n\n"
       << "Options:\n"
+      << "  --in-file <path>        Raw PCM input file (interleaved)\n"
+      << "  --out-file <path>       Raw PCM output file (interleaved)\n"
       << "  --filter <path>         Filter JSON path (docs/filter_format.md)\n"
       << "  --filter-dir <path>     Filter directory (default: "
          "data/coefficients)\n"
@@ -86,6 +94,22 @@ bool ParseArgs(int argc, char **argv, CliOptions *options) {
         return false;
       }
       options->outputDevice = val;
+      continue;
+    }
+    if (arg == "--in-file") {
+      const char *val = requireValue("--in-file");
+      if (!val) {
+        return false;
+      }
+      options->inputFile = val;
+      continue;
+    }
+    if (arg == "--out-file") {
+      const char *val = requireValue("--out-file");
+      if (!val) {
+        return false;
+      }
+      options->outputFile = val;
       continue;
     }
     if (arg == "--filter") {
@@ -225,6 +249,100 @@ bool PrepareFilter(
   return true;
 }
 
+bool ProcessFilePipeline(
+    const CliOptions &options, snd_pcm_format_t format,
+    std::vector<totton::vulkan::VulkanStreamingUpsampler> *channelUpsamplers,
+    unsigned int periodFrames) {
+  if (options.requestedRate == 0) {
+    std::cerr << "--rate is required for file processing\n";
+    return false;
+  }
+  if (options.inputFile.empty() || options.outputFile.empty()) {
+    std::cerr << "--in-file and --out-file must be specified together\n";
+    return false;
+  }
+
+  std::ifstream input(options.inputFile, std::ios::binary);
+  if (!input) {
+    std::cerr << "Failed to open input file: " << options.inputFile << "\n";
+    return false;
+  }
+  std::ofstream output(options.outputFile, std::ios::binary | std::ios::trunc);
+  if (!output) {
+    std::cerr << "Failed to open output file: " << options.outputFile << "\n";
+    return false;
+  }
+
+  const size_t frameBytes =
+      totton::alsa::BytesPerSample(format) * options.channels;
+  std::vector<uint8_t> rawBuffer(periodFrames * frameBytes);
+  std::vector<float> floatBuffer;
+  std::vector<float> processed;
+  std::vector<uint8_t> outBuffer;
+
+  std::cerr << "File processing started: input " << options.requestedRate
+            << " Hz, period " << periodFrames << " frames\n";
+
+  while (gRunning.load()) {
+    input.read(reinterpret_cast<char *>(rawBuffer.data()),
+               static_cast<std::streamsize>(rawBuffer.size()));
+    std::streamsize bytesRead = input.gcount();
+    if (bytesRead <= 0) {
+      break;
+    }
+
+    size_t framesRead = static_cast<size_t>(bytesRead) / frameBytes;
+    if (framesRead == 0) {
+      break;
+    }
+
+    if (framesRead < periodFrames) {
+      std::fill(rawBuffer.begin() + framesRead * frameBytes, rawBuffer.end(),
+                0);
+    }
+
+    if (!totton::alsa::ConvertPcmToFloat(rawBuffer.data(), format, periodFrames,
+                                         options.channels, &floatBuffer)) {
+      std::cerr << "PCM conversion failed\n";
+      return false;
+    }
+
+    processed.assign(floatBuffer.size(), 0.0f);
+
+    if (channelUpsamplers && !channelUpsamplers->empty()) {
+      const size_t frames = periodFrames;
+      for (unsigned int ch = 0; ch < options.channels; ++ch) {
+        std::vector<float> channel(frames, 0.0f);
+        for (size_t i = 0; i < frames; ++i) {
+          channel[i] = floatBuffer[i * options.channels + ch];
+        }
+        std::vector<float> out = (*channelUpsamplers)[ch].ProcessBlock(
+            channel.data(), channel.size());
+        if (out.size() != frames) {
+          std::cerr << "Filter output size mismatch\n";
+          return false;
+        }
+        for (size_t i = 0; i < frames; ++i) {
+          processed[i * options.channels + ch] = out[i];
+        }
+      }
+    } else {
+      processed = floatBuffer;
+    }
+
+    if (!totton::alsa::ConvertFloatToPcm(processed, format, &outBuffer)) {
+      std::cerr << "PCM output conversion failed\n";
+      return false;
+    }
+
+    output.write(reinterpret_cast<const char *>(outBuffer.data()),
+                 static_cast<std::streamsize>(framesRead * frameBytes));
+  }
+
+  std::cerr << "File processing stopped\n";
+  return true;
+}
+
 } // namespace
 
 int main(int argc, char **argv) {
@@ -237,7 +355,15 @@ int main(int argc, char **argv) {
     PrintUsage(argv[0]);
     return 0;
   }
-  if (options.inputDevice.empty() || options.outputDevice.empty()) {
+  const bool fileMode =
+      !options.inputFile.empty() || !options.outputFile.empty();
+  if (fileMode) {
+    if (options.inputFile.empty() || options.outputFile.empty()) {
+      std::cerr << "--in-file and --out-file must be specified together\n";
+      PrintUsage(argv[0]);
+      return 1;
+    }
+  } else if (options.inputDevice.empty() || options.outputDevice.empty()) {
     std::cerr << "--in and --out are required\n";
     PrintUsage(argv[0]);
     return 1;
@@ -267,6 +393,14 @@ int main(int argc, char **argv) {
   unsigned int periodFrames = options.periodFrames;
   if (periodFrames == 0) {
     periodFrames = 1024;
+  }
+
+  if (fileMode) {
+    if (!ProcessFilePipeline(options, format, &channelUpsamplers,
+                             periodFrames)) {
+      return 1;
+    }
+    return 0;
   }
 
   auto capture = totton::alsa::OpenCaptureAutoRate(

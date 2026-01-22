@@ -1,5 +1,7 @@
 # Build artifacts
 build/
+!build/alsa_streamer
+!build/zmq_control_server
 *.o
 *.so
 *.a
