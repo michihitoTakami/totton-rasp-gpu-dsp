@@ -408,54 +408,30 @@ uv run python scripts/integration/export_raspi_openapi.py --check
 
 ## Git Workflow
 
-### Mandatory Rules
+詳細な Git ワークフローのルールは **[.claude/rules/git-workflow.md](.claude/rules/git-workflow.md)** を参照してください。
 
-1. **GitHub CLI (`gh`) Required:** GitHub操作（Issue、PR、ラベル等）は必ず `gh` コマンドを使用すること
-2. **Issue Number Required:** ブランチ名・PR名には必ずIssue番号を含めること
-   - ブランチ名: `feature/#123-feature-name` または `fix/#456-bug-description`
-   - PR名: `#123 機能の説明` または `Fix #456: バグの説明`
-3. **⚠️ PRマージ禁止:** `gh pr merge` は**絶対に**ユーザーの明示的な許可なしに実行しないこと。PRの作成までは行ってよいが、マージはユーザーがレビュー後に自分で行う。
-4. **⚠️ mainブランチ直接作業禁止:** mainブランチで直接コミット・編集しないこと。必ずworktreeでfeature/fix branchを作成して作業する。
-5. **⚠️ `--no-verify`禁止:** `git push --no-verify`や`git commit --no-verify`は**絶対に使用しないこと**。pre-commitフックやpre-pushフックで失敗した場合は、たとえ自分の変更に起因しないエラーであっても、そのエラーを修正してからプッシュすること。テストの品質維持は全員の責任。
-6. **⚠️ Skillsファイル操作もworktree必須:** `.claude/skills/`配下のファイル作成・編集時も、必ずworktreeで作業すること。mainブランチでの直接操作は厳禁。SkillsもコードであるためGit Workflowルールが適用される。
-7. **Worktree作成前に必ず `git fetch origin main` を実行すること。** 最新の`origin/main`を取り込まずにworktreeを切ると後続で大規模コンフリクトが発生しやすい。
+### 重要な原則
 
-### Git Worktree
+- **Git Worktree 必須**: 全ての機能開発・バグ修正には worktree を使用
+- **Issue 番号必須**: ブランチ名・PR 名には必ず Issue 番号を含める（例: `feature/#123-feature-name`）
+- **GitHub CLI (`gh`) 使用**: GitHub 操作には `gh` コマンドを使用
+- **`--no-verify` 禁止**: pre-commit/pre-push フックは必ず実行
+- **PR マージ禁止**: マージはユーザーが実行（AI は PR 作成まで）
+- **main ブランチ直接作業禁止**: 必ず worktree で作業
 
-**Always use Git Worktree for feature development and bug fixes.**
+### クイックリファレンス
 
 ```bash
-# Create a new worktree for the feature branch (with Issue number)
+# 標準ワークフロー
+git fetch origin main
 git worktree add worktrees/123-feature-name -b feature/#123-feature-name
-
-# Work in the worktree directory
 cd worktrees/123-feature-name
-
-# After completion, push and create PR (with Issue number in title)
+# ... 作業 ...
 git push -u origin feature/#123-feature-name
 gh pr create --title "#123 機能の説明" --body "..."
-
-# Clean up after PR is merged
-git worktree remove worktrees/123-feature-name
 ```
 
-### GitHub Operations (via `gh` command)
-
-```bash
-# Issue操作
-gh issue list
-gh issue view 123
-gh issue create --title "..." --body "..."
-
-# PR操作
-gh pr create --title "#123 ..." --body "..."
-gh pr list
-gh pr view 123
-
-# ラベル・マイルストーン
-gh label list
-gh milestone list
-```
+詳細: **[.claude/rules/git-workflow.md](.claude/rules/git-workflow.md)**
 
 ## Reference Projects
 
