@@ -1,5 +1,19 @@
 {
   "eqEnabled": false,
   "eqProfile": null,
-  "eqProfilePath": null
+  "eqProfilePath": null,
+  "alsa": {
+    "inputDevice": "hw:0,0",
+    "outputDevice": "hw:0,0",
+    "sampleRate": 44100,
+    "channels": 2,
+    "format": "S32_LE",
+    "periodFrames": 4096,
+    "bufferFrames": 16384
+  },
+  "filter": {
+    "ratio": 2,
+    "phaseType": "minimum",
+    "directory": "/opt/totton-dsp/data/coefficients"
+  }
 }

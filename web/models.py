@@ -6,17 +6,34 @@ from pydantic import BaseModel, Field, StringConstraints
 from typing_extensions import Annotated
 
 
+class AlsaSettings(BaseModel):
+    """ALSA configuration settings."""
+
+    input_device: Optional[str] = None
+    output_device: Optional[str] = None
+    sample_rate: Optional[int] = Field(default=None, ge=0)
+    channels: Optional[int] = Field(default=None, ge=1)
+    format: Optional[str] = None
+    period_frames: Optional[int] = Field(default=None, ge=0)
+    buffer_frames: Optional[int] = Field(default=None, ge=0)
+
+
+class FilterSettings(BaseModel):
+    """Filter configuration settings."""
+
+    ratio: Optional[int] = Field(default=None, ge=1)
+    phase_type: Optional[str] = None
+    directory: Optional[str] = None
+
+
 class Settings(BaseModel):
     """Minimal config settings used by EQ endpoints."""
 
     eq_enabled: bool = False
     eq_profile: Optional[str] = None
     eq_profile_path: Optional[str] = None
-    alsa_input_device: Optional[str] = None
-    alsa_output_device: Optional[str] = None
-    alsa_sample_rate: Optional[int] = None
-    alsa_channels: Optional[int] = None
-    alsa_format: Optional[str] = None
+    alsa: Optional[AlsaSettings] = None
+    filter: Optional[FilterSettings] = None
 
 
 class AlsaDeviceListResponse(BaseModel):
@@ -35,11 +52,8 @@ class ConfigResponse(BaseModel):
 class ConfigUpdateRequest(BaseModel):
     """Update request for config.json."""
 
-    alsa_input_device: Optional[str] = None
-    alsa_output_device: Optional[str] = None
-    alsa_sample_rate: Optional[int] = Field(default=None, ge=0)
-    alsa_channels: Optional[int] = Field(default=None, ge=1)
-    alsa_format: Optional[str] = None
+    alsa: Optional[AlsaSettings] = None
+    filter: Optional[FilterSettings] = None
 
 
 class EqProfileInfo(BaseModel):

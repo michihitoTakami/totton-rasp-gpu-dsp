@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
 
 from web.main import app
-from web.models import Settings
+from web.models import AlsaSettings, FilterSettings, Settings
 
 
 class _DummyClient:
@@ -48,11 +48,20 @@ def test_api_update_config(monkeypatch):
     monkeypatch.setattr(
         "web.routers.config.load_config",
         lambda: Settings(
-            alsa_input_device="hw:0,0",
-            alsa_output_device="hw:1,0",
-            alsa_sample_rate=48000,
-            alsa_channels=2,
-            alsa_format="S32_LE",
+            alsa=AlsaSettings(
+                input_device="hw:0,0",
+                output_device="hw:1,0",
+                sample_rate=48000,
+                channels=2,
+                format="S32_LE",
+                period_frames=4096,
+                buffer_frames=16384,
+            ),
+            filter=FilterSettings(
+                ratio=2,
+                phase_type="minimum",
+                directory="/opt/totton-dsp/data/coefficients",
+            ),
         ),
     )
 
@@ -60,11 +69,20 @@ def test_api_update_config(monkeypatch):
     response = client.patch(
         "/api/config",
         json={
-            "alsa_input_device": "hw:2,0",
-            "alsa_output_device": "hw:3,0",
-            "alsa_sample_rate": 96000,
-            "alsa_channels": 4,
-            "alsa_format": "S24_3LE",
+            "alsa": {
+                "input_device": "hw:2,0",
+                "output_device": "hw:3,0",
+                "sample_rate": 96000,
+                "channels": 4,
+                "format": "S24_3LE",
+                "period_frames": 2048,
+                "buffer_frames": 8192,
+            },
+            "filter": {
+                "ratio": 4,
+                "phase_type": "linear",
+                "directory": "/tmp/filters",
+            },
         },
     )
 
