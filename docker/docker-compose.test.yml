@@ -1,0 +1,36 @@
+services:
+  totton-dsp-test:
+    build:
+      context: ..
+      dockerfile: Dockerfile.dev
+    image: totton-dsp-test:local
+    container_name: totton-dsp-test
+    environment:
+      TOTTON_CONFIG_PATH: /var/lib/totton-dsp/config.json
+      TOTTON_EQ_DIR: /var/lib/totton-dsp/eq
+      TOTTON_ZMQ_ENDPOINT: ipc:///tmp/totton_zmq.sock
+      TOTTON_ZMQ_PUB_ENDPOINT: ipc:///tmp/totton_zmq_pub.sock
+      TOTTON_STATS_PATH: /tmp/gpu_upsampler_stats.json
+      TOTTON_WEB_PORT: 8080
+      ALSA_CONFIG_PATH: /opt/totton-dsp/test/alsa_file.conf
+      TOTTON_ALSA_IN: ${TOTTON_ALSA_IN:-file_in}
+      TOTTON_ALSA_OUT: ${TOTTON_ALSA_OUT:-file_out}
+      TOTTON_ALSA_RATE: ${TOTTON_ALSA_RATE:-48000}
+      TOTTON_ALSA_CHANNELS: ${TOTTON_ALSA_CHANNELS:-2}
+      TOTTON_ALSA_FORMAT: ${TOTTON_ALSA_FORMAT:-S32_LE}
+      TOTTON_FILTER_DIR: ${TOTTON_FILTER_DIR:-/opt/totton-dsp/data/coefficients}
+      TOTTON_FILTER_RATIO: ${TOTTON_FILTER_RATIO:-1}
+      TOTTON_FILTER_PHASE: ${TOTTON_FILTER_PHASE:-min}
+    volumes:
+      - ../data/coefficients:/opt/totton-dsp/data/coefficients:ro
+      - ${TOTTON_TEST_DIR:-/tmp/totton-test}:/opt/totton-dsp/test
+      - totton-dsp-test-data:/var/lib/totton-dsp
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  totton-dsp-test-data:
