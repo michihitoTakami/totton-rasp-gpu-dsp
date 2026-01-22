@@ -17,11 +17,10 @@ Commands:
 USAGE
 }
 
-run_cmd() {
-  if [[ $EUID -ne 0 ]] && command -v sudo >/dev/null 2>&1; then
-    sudo "$@"
-  else
-    "$@"
+require_root() {
+  if [[ $EUID -ne 0 ]]; then
+    echo "This command must be run as root (no sudo usage in tests)." >&2
+    exit 1
   fi
 }
 
@@ -61,10 +60,12 @@ case "$cmd" in
       args+=("pcm_substreams=$substreams")
     fi
 
-    run_cmd modprobe "${args[@]}"
+    require_root
+    modprobe "${args[@]}"
     ;;
   teardown)
-    run_cmd modprobe -r snd-aloop
+    require_root
+    modprobe -r snd-aloop
     ;;
   status)
     if [[ -r /proc/asound/cards ]] && grep -q "Loopback" /proc/asound/cards; then

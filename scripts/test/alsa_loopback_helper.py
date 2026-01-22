@@ -7,8 +7,6 @@ from pathlib import Path
 
 
 def run_cmd(cmd: list[str]) -> int:
-    if os.geteuid() != 0 and shutil.which("sudo"):
-        cmd = ["sudo", *cmd]
     return subprocess.call(cmd)
 
 
@@ -29,6 +27,9 @@ def list_devices() -> None:
 
 
 def setup_loopback(index: int | None, substreams: int | None) -> None:
+    if os.geteuid() != 0:
+        print("This command must be run as root (no sudo usage in tests).")
+        raise SystemExit(1)
     args = ["modprobe", "snd-aloop"]
     if index is not None:
         args.append(f"index={index}")
@@ -38,6 +39,9 @@ def setup_loopback(index: int | None, substreams: int | None) -> None:
 
 
 def teardown_loopback() -> None:
+    if os.geteuid() != 0:
+        print("This command must be run as root (no sudo usage in tests).")
+        raise SystemExit(1)
     raise SystemExit(run_cmd(["modprobe", "-r", "snd-aloop"]))
 
 

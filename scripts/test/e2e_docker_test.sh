@@ -21,7 +21,10 @@ cleanup() {
 }
 trap cleanup EXIT
 
-"$ROOT_DIR/docker/setup-alsa-loopback.sh" setup --pcm-substreams 2
+if ! "$ROOT_DIR/docker/setup-alsa-loopback.sh" status >/dev/null 2>&1; then
+  echo "ALSA Loopback is not loaded. Load it manually as root before running tests." >&2
+  exit 1
+fi
 
 for rate in $RATE_LIST; do
   export TOTTON_ALSA_RATE="$rate"
