@@ -48,6 +48,20 @@ repos:
         pass_filenames: false
         exclude: ^third_party/
         always_run: true
+      - id: e2e-local-file
+        name: Run local file E2E test
+        entry: ./scripts/test/e2e_local_file_test.sh
+        language: system
+        stages: [pre-push]
+        pass_filenames: false
+        always_run: true
+      - id: e2e-docker-file
+        name: Run Docker file E2E test
+        entry: ./scripts/test/e2e_docker_test.sh
+        language: system
+        stages: [pre-push]
+        pass_filenames: false
+        always_run: true
 
   # clang-format for C/C++/CUDA formatting
   - repo: https://github.com/pre-commit/mirrors-clang-format
