@@ -1,0 +1,50 @@
+# Build artifacts
+build/
+*.o
+*.so
+*.a
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+*.egg
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Documentation (except README)
+docs/
+*.md
+!README.md
+
+# Test output artifacts
+plots/
+
+# Temporary files
+*.log
+*.tmp
+/tmp/
+
+# Environment files
+.env
+.env.*
+
+# Worktrees
+worktrees/
+
+# CI/CD
+.github/

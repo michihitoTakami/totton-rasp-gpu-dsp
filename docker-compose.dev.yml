@@ -1,0 +1,80 @@
+# X86 Development Environment Docker Compose
+# For local testing with ALSA loopback and Vulkan GPU
+
+services:
+  totton-dsp-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: totton-dsp-dev
+    gpus: all
+    devices:
+      - "/dev/snd:/dev/snd"
+    group_add:
+      - "audio"
+      - "video"
+    environment:
+      TOTTON_CONFIG_PATH: /var/lib/totton-dsp/config.json
+      TOTTON_EQ_DIR: /var/lib/totton-dsp/eq
+      TOTTON_ZMQ_ENDPOINT: tcp://0.0.0.0:5555
+      TOTTON_ZMQ_PUB_ENDPOINT: tcp://0.0.0.0:5556
+      TOTTON_STATS_PATH: /tmp/gpu_upsampler_stats.json
+      TOTTON_WEB_PORT: 8080
+      # ALSA Loopback configuration for testing
+      TOTTON_ALSA_IN: ${TOTTON_ALSA_IN:-hw:Loopback,1,0}
+      TOTTON_ALSA_OUT: ${TOTTON_ALSA_OUT:-hw:Loopback,1,1}
+      TOTTON_ALSA_RATE: ${TOTTON_ALSA_RATE:-44100}
+      TOTTON_ALSA_CHANNELS: ${TOTTON_ALSA_CHANNELS:-2}
+      TOTTON_ALSA_FORMAT: ${TOTTON_ALSA_FORMAT:-S32_LE}
+      # Filter configuration (ratio=1 for initial testing)
+      TOTTON_FILTER_DIR: ${TOTTON_FILTER_DIR:-/opt/totton-dsp/data/coefficients}
+      TOTTON_FILTER_RATIO: ${TOTTON_FILTER_RATIO:-1}
+      TOTTON_FILTER_PHASE: ${TOTTON_FILTER_PHASE:-min}
+    volumes:
+      - totton-dsp-dev-data:/var/lib/totton-dsp
+      # Mount coefficients directory for easy testing
+      - ./data/coefficients:/opt/totton-dsp/data/coefficients:ro
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  totton-web-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: totton-web-dev
+    depends_on:
+      - totton-dsp-dev
+    entrypoint:
+      - uvicorn
+      - web.main:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8080"
+      - --reload
+    environment:
+      TOTTON_CONFIG_PATH: /var/lib/totton-dsp/config.json
+      TOTTON_EQ_DIR: /var/lib/totton-dsp/eq
+      TOTTON_ZMQ_ENDPOINT: tcp://totton-dsp-dev:5555
+      TOTTON_ZMQ_PUB_ENDPOINT: tcp://totton-dsp-dev:5556
+      TOTTON_STATS_PATH: /tmp/gpu_upsampler_stats.json
+      TOTTON_WEB_PORT: 8080
+    volumes:
+      - totton-dsp-dev-data:/var/lib/totton-dsp
+      # Mount web directory for hot reload during development
+      - ./web:/opt/totton-dsp/web:ro
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  totton-dsp-dev-data:
