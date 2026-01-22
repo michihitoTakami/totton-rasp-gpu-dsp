@@ -39,7 +39,8 @@ bool HasVulkanDevice() {
 }
 #endif
 
-std::filesystem::path WriteTempFilter(const std::filesystem::path &dir) {
+std::filesystem::path WriteTempFilter(const std::filesystem::path &dir,
+                                      std::size_t upsampleFactor) {
   std::filesystem::create_directories(dir);
 
   const std::filesystem::path binPath = dir / "coeffs.bin";
@@ -57,7 +58,7 @@ std::filesystem::path WriteTempFilter(const std::filesystem::path &dir) {
        << "  \"taps\": 5,\n"
        << "  \"fft_size\": 16,\n"
        << "  \"block_size\": 12,\n"
-       << "  \"upsample_factor\": 1\n"
+       << "  \"upsample_factor\": " << upsampleFactor << "\n"
        << "}\n";
   json.close();
 
@@ -75,6 +76,18 @@ std::vector<float> Convolve(const std::vector<float> &input,
     for (std::size_t j = 0; j < filter.size(); ++j) {
       output[i + j] += input[i] * filter[j];
     }
+  }
+  return output;
+}
+
+std::vector<float> ZeroStuff(const std::vector<float> &input,
+                             std::size_t factor) {
+  if (factor == 0) {
+    return {};
+  }
+  std::vector<float> output(input.size() * factor, 0.0f);
+  for (std::size_t i = 0; i < input.size(); ++i) {
+    output[i * factor] = input[i];
   }
   return output;
 }
@@ -106,7 +119,7 @@ int main() {
   const auto tempDir = std::filesystem::temp_directory_path() /
                        ("totton_upsampler_test_" + std::to_string(::getpid()) +
                         "_" + std::to_string(stamp));
-  const auto jsonPath = WriteTempFilter(tempDir);
+  const auto jsonPath = WriteTempFilter(tempDir, 1);
 
   totton::vulkan::VulkanStreamingUpsampler upsampler;
   std::string error;
@@ -152,6 +165,32 @@ int main() {
   actualStream.insert(actualStream.end(), outB.begin(), outB.end());
   if (!CheckVectorNear(actualStream, expectedStream)) {
     std::cerr << "Streaming overlap mismatch\n";
+    return 1;
+  }
+
+  const auto upsampleDir = tempDir / "upsample2x";
+  const auto upsampleJsonPath = WriteTempFilter(upsampleDir, 2);
+  totton::vulkan::VulkanStreamingUpsampler upsampled;
+  if (!upsampled.LoadFilter(upsampleJsonPath.string(), &error)) {
+    std::cerr << "LoadFilter failed (2x): " << error << "\n";
+    return 1;
+  }
+
+  const std::size_t inputBlockSize = 6;
+  std::vector<float> impulseInput(inputBlockSize, 0.0f);
+  impulseInput[2] = 1.0f;
+  const auto upsampledOut =
+      upsampled.ProcessBlock(impulseInput.data(), impulseInput.size());
+  if (upsampledOut.size() != blockSize) {
+    std::cerr << "Unexpected output size (2x): " << upsampledOut.size() << "\n";
+    return 1;
+  }
+  const auto zeroStuffed = ZeroStuff(impulseInput, 2);
+  const auto upsampleConv = Convolve(zeroStuffed, taps);
+  const std::vector<float> expectedUpsample(upsampleConv.begin(),
+                                            upsampleConv.begin() + blockSize);
+  if (!CheckVectorNear(upsampledOut, expectedUpsample)) {
+    std::cerr << "Upsampled impulse response mismatch\n";
     return 1;
   }
 

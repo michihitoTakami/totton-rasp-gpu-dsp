@@ -387,7 +387,17 @@ int main(int argc, char **argv) {
     return 1;
   }
   if (filterConfig) {
-    options.periodFrames = static_cast<unsigned int>(filterConfig->blockSize);
+    if (filterConfig->upsampleFactor > 1) {
+      const std::size_t inputFrames =
+          filterConfig->blockSize / filterConfig->upsampleFactor;
+      if (inputFrames == 0) {
+        std::cerr << "Invalid filter block size for upsampling.\n";
+        return 1;
+      }
+      options.periodFrames = static_cast<unsigned int>(inputFrames);
+    } else {
+      options.periodFrames = static_cast<unsigned int>(filterConfig->blockSize);
+    }
   }
 
   unsigned int periodFrames = options.periodFrames;
@@ -411,15 +421,27 @@ int main(int argc, char **argv) {
   }
 
   unsigned int outputRate = capture->rate;
-  if (filterConfig && filterConfig->upsampleFactor > 1) {
-    std::cerr
-        << "Filter upsample_factor > 1 is not supported in this streamer.\n";
-    return 1;
+  std::size_t upsampleFactor = 1;
+  if (filterConfig) {
+    upsampleFactor = std::max<std::size_t>(filterConfig->upsampleFactor, 1);
+    outputRate = static_cast<unsigned int>(capture->rate * upsampleFactor);
+    if (upsampleFactor > 1) {
+      const auto expectedInputFrames = static_cast<snd_pcm_uframes_t>(
+          filterConfig->blockSize / upsampleFactor);
+      if (capture->periodFrames != expectedInputFrames) {
+        std::cerr << "ALSA capture period mismatch: expected "
+                  << expectedInputFrames << " frames, got "
+                  << capture->periodFrames << " frames\n";
+        return 1;
+      }
+    }
   }
 
+  const auto outputFrames =
+      static_cast<size_t>(capture->periodFrames) * upsampleFactor;
   auto playback = totton::alsa::OpenPcm(
       options.outputDevice, SND_PCM_STREAM_PLAYBACK, format, options.channels,
-      outputRate, capture->periodFrames, options.bufferFrames);
+      outputRate, outputFrames, options.bufferFrames);
   if (!playback) {
     return 1;
   }
@@ -432,6 +454,7 @@ int main(int argc, char **argv) {
   std::vector<uint8_t> outBuffer;
 
   std::cerr << "ALSA streaming started: input " << capture->rate << " Hz, "
+            << "output " << outputRate << " Hz, "
             << "period " << capture->periodFrames << " frames\n";
 
   while (gRunning.load()) {
@@ -447,7 +470,7 @@ int main(int argc, char **argv) {
       break;
     }
 
-    processed.assign(floatBuffer.size(), 0.0f);
+    processed.assign(outputFrames * options.channels, 0.0f);
 
     if (!channelUpsamplers.empty()) {
       const size_t frames = capture->periodFrames;
@@ -458,12 +481,12 @@ int main(int argc, char **argv) {
         }
         std::vector<float> out =
             channelUpsamplers[ch].ProcessBlock(channel.data(), channel.size());
-        if (out.size() != frames) {
+        if (out.size() != outputFrames) {
           std::cerr << "Filter output size mismatch\n";
           gRunning.store(false);
           break;
         }
-        for (size_t i = 0; i < frames; ++i) {
+        for (size_t i = 0; i < outputFrames; ++i) {
           processed[i * options.channels + ch] = out[i];
         }
       }
@@ -477,7 +500,7 @@ int main(int argc, char **argv) {
     }
 
     if (!totton::alsa::WriteFull(playback->handle, outBuffer.data(),
-                                 playback->periodFrames, gRunning)) {
+                                 outputFrames, gRunning)) {
       break;
     }
   }
