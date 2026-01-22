@@ -113,10 +113,13 @@ std::vector<float> VulkanStreamingUpsampler::ProcessBlock(const float *input,
 
   const std::size_t upsampleFactor =
       std::max<std::size_t>(config_.upsampleFactor, 1);
+  if (config_.blockSize % upsampleFactor != 0) {
+    return {};
+  }
   const std::size_t maxInputSamples = upsampleFactor > 1
                                           ? (config_.blockSize / upsampleFactor)
                                           : config_.blockSize;
-  if (maxInputSamples == 0 || count > maxInputSamples) {
+  if (maxInputSamples == 0 || count != maxInputSamples) {
     return {};
   }
 
@@ -230,6 +233,13 @@ bool VulkanStreamingUpsampler::LoadFilterConfig(const std::string &jsonPath,
   config->blockSize = blockSize;
   if (config->upsampleFactor == 0) {
     config->upsampleFactor = 1;
+  }
+  if (config->upsampleFactor > 1 &&
+      (config->blockSize % config->upsampleFactor) != 0) {
+    if (errorMessage) {
+      *errorMessage = "block_size must be divisible by upsample_factor";
+    }
+    return false;
   }
 
   return true;

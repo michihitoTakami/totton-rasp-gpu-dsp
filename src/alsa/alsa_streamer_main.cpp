@@ -292,6 +292,17 @@ int main(int argc, char **argv) {
   if (filterConfig) {
     upsampleFactor = std::max<std::size_t>(filterConfig->upsampleFactor, 1);
     outputRate = static_cast<unsigned int>(capture->rate * upsampleFactor);
+    if (upsampleFactor > 1) {
+      const auto expectedInputFrames =
+          static_cast<snd_pcm_uframes_t>(filterConfig->blockSize /
+                                         upsampleFactor);
+      if (capture->periodFrames != expectedInputFrames) {
+        std::cerr << "ALSA capture period mismatch: expected "
+                  << expectedInputFrames << " frames, got "
+                  << capture->periodFrames << " frames\n";
+        return 1;
+      }
+    }
   }
 
   const auto outputFrames =
