@@ -75,52 +75,6 @@ WantedBy=multi-user.target
 Enable with:
 `sudo systemctl enable docker` and `sudo systemctl enable --now totton-dsp.service`
 
-### X86 Development Environment (Issue #44)
-For local development and testing with ALSA loopback and NVIDIA Vulkan GPU.
-
-**Requirements:**
-- Docker Engine + Docker Compose v2 (`docker compose`)
-- NVIDIA GPU (e.g., RTX 2070 Super)
-- NVIDIA Container Toolkit (`nvidia-container-toolkit`)
-- ALSA development packages
-
-**Setup:**
-```bash
-# Install dependencies (Ubuntu/Debian)
-sudo apt-get install -y \
-  docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin \
-  libasound2-dev libzmq3-dev libvulkan-dev \
-  vulkan-tools mesa-vulkan-drivers
-
-# Install NVIDIA Container Toolkit (required for GPU access in Docker)
-# Follow: https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html
-
-# Setup ALSA loopback
-sudo modprobe snd-aloop pcm_substreams=2 index=10
-```
-
-**Build and run:**
-```bash
-# Build development image
-docker compose -f docker-compose.dev.yml build
-
-# Start development environment
-docker compose -f docker-compose.dev.yml up -d
-
-# View logs
-docker compose -f docker-compose.dev.yml logs -f
-```
-
-**Configuration:**
-- Uses `Dockerfile.dev` for X86 build environment
-- ALSA devices default to `hw:Loopback,1,0` (input) and `hw:Loopback,1,1` (output)
-- Filter ratio defaults to `1` (no upsampling, for initial testing)
-- Web directory mounted for hot reload during development
-- GPU access uses Compose `gpus: all` (NVIDIA Container Toolkit required)
-
-**Testing:**
-Test audio can be written to `hw:Loopback,1,0` and processed audio read from `hw:Loopback,1,1`.
-
 ### Expected outcomes
 - Bundle binaries, filters, and configuration examples into the Pi (arm64) release
 - Enable EQ application, config tweaks, and RELOAD via both the UI and the ZeroMQ API
@@ -240,52 +194,6 @@ WantedBy=multi-user.target
 ```
 有効化:
 `sudo systemctl enable docker` と `sudo systemctl enable --now totton-dsp.service`
-
-### X86開発環境 (Issue #44)
-ALSA loopback と NVIDIA Vulkan GPU を使用したローカル開発・テスト環境。
-
-**必要要件:**
-- Docker Engine + Docker Compose v2（`docker compose`）
-- NVIDIA GPU（例: RTX 2070 Super）
-- NVIDIA Container Toolkit（`nvidia-container-toolkit`）
-- ALSA開発パッケージ
-
-**セットアップ:**
-```bash
-# 依存パッケージのインストール (Ubuntu/Debian)
-sudo apt-get install -y \
-  docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin \
-  libasound2-dev libzmq3-dev libvulkan-dev \
-  vulkan-tools mesa-vulkan-drivers
-
-# NVIDIA Container Toolkit のインストール（Docker で GPU を使うため必須）
-# 公式手順: https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html
-
-# ALSA loopback のセットアップ
-sudo modprobe snd-aloop pcm_substreams=2 index=10
-```
-
-**ビルドと起動:**
-```bash
-# 開発環境イメージのビルド
-docker compose -f docker-compose.dev.yml build
-
-# 開発環境の起動
-docker compose -f docker-compose.dev.yml up -d
-
-# ログの表示
-docker compose -f docker-compose.dev.yml logs -f
-```
-
-**設定:**
-- X86ビルド環境用に `Dockerfile.dev` を使用
-- ALSAデバイスは `hw:Loopback,1,0`（入力）と `hw:Loopback,1,1`（出力）がデフォルト
-- フィルタ比率は `1`（アップサンプリングなし、初期テスト用）がデフォルト
-- 開発時のホットリロード用に web ディレクトリをマウント
-- GPU は Compose の `gpus: all` を利用（NVIDIA Container Toolkit 必須）
-
-**テスト:**
-テスト音源を `hw:Loopback,1,0` に書き込むと、処理済み音声を `hw:Loopback,1,1` から読み取れます。
 
 ### 期待する成果
 - Pi (arm64) 向けリリースにバイナリ・フィルタ・設定例を添付
