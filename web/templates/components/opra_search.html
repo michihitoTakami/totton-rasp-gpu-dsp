@@ -1,0 +1,52 @@
+{#
+OPRA Headphone Search Component
+
+Usage:
+    {% include 'components/opra_search.html' %}
+
+Requirements:
+    - Parent component must have Alpine.js data with:
+      - opra: { searchQuery, results, selected, eqProfiles, selectedEqId, useModernTarget, searching }
+      - searchOPRA() function
+      - selectHeadphone(result) function
+#}
+{% import "components/forms.html" as forms %}
+
+{{ forms.text_input(
+  'opraSearch',
+  'Search Headphones',
+  'opra.searchQuery',
+  placeholder='e.g. HD650, DT770, AirPods...',
+  attrs='@input="searchOPRA" class="search-input"'
+) }}
+
+<div class="opra-results" x-show="opra.results.length > 0" style="max-height: 300px; overflow-y: auto; margin-top: 12px;">
+  <template x-for="result in opra.results" :key="result.name">
+    <div class="opra-result-item" @click="selectHeadphone(result)">
+      <div class="opra-result-name" x-text="result.name"></div>
+      <div class="opra-result-vendor" x-text="result.vendor?.name || result.vendor"></div>
+    </div>
+  </template>
+</div>
+
+<div class="opra-selected" x-show="opra.selected" style="margin-top: 16px;">
+  <div class="opra-selected-name" x-text="opra.selected?.name"></div>
+  <div class="opra-selected-vendor" x-text="opra.selected?.vendor?.name || opra.selected?.vendor"></div>
+
+  <div class="form-group" style="margin-top: 12px;" x-show="opra.eqProfiles.length > 0">
+    <label for="opraEqSelect">EQ Variation</label>
+    <select id="opraEqSelect" x-model="opra.selectedEqId">
+      <template x-for="eq in opra.eqProfiles" :key="eq.id">
+        <option :value="eq.id" x-text="eq.details || eq.id"></option>
+      </template>
+    </select>
+  </div>
+
+  <label class="checkbox-label" style="margin-top: 12px;">
+    <input type="checkbox" x-model="opra.useModernTarget">
+    <span>Modern Target (KB5000_7)</span>
+  </label>
+  <div class="info-text" style="margin-left: 24px;">
+    Correct to the latest target curve.
+  </div>
+</div>

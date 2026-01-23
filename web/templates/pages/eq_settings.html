@@ -119,6 +119,18 @@
     {% endcall %}
   </div>
 
+  {% call panels.card_panel("OPRA Headphone Search") %}
+    {% include 'components/opra_search.html' %}
+    <div class="profile-actions" style="margin-top: 12px;">
+      {{ buttons.btn_primary('Apply OPRA EQ', icon='✓', click='applyOPRA()', disabled='!opra.selected || opraActionPending') }}
+    </div>
+    <div class="notice success" x-show="opraMessage" x-text="opraMessage" style="margin-top: 12px;"></div>
+    <div class="notice error" x-show="opraError" x-text="opraError" style="margin-top: 12px;"></div>
+    <div class="opra-license" style="margin-top: 16px;">
+      EQ data: <a href="https://github.com/opra-project/OPRA" target="_blank" rel="noopener noreferrer">OPRA Project</a> (CC BY-SA 4.0)
+    </div>
+  {% endcall %}
+
   {% call panels.card_panel("Saved Profiles") %}
     <div class="profile-list" x-show="profiles.length">
       <template x-for="profile in profiles" :key="profile.name">
@@ -145,6 +157,18 @@ function eqApp() {
     validation: null,
     upload: { file: null },
     recommendedPreamp: 0,
+    opra: {
+      searchQuery: '',
+      results: [],
+      selected: null,
+      eqProfiles: [],
+      selectedEqId: '',
+      useModernTarget: true,
+      searching: false
+    },
+    opraActionPending: false,
+    opraMessage: null,
+    opraError: null,
     status: {
       daemon_running: false,
       state: 'stopped',
@@ -210,6 +234,66 @@ function eqApp() {
       const data = await response.json();
       if (data.phase_type) {
         this.phaseType = data.phase_type;
+      }
+    },
+    async searchOPRA() {
+      if (!this.opra.searchQuery || this.opra.searchQuery.length < 2) {
+        this.opra.results = [];
+        return;
+      }
+
+      this.opra.searching = true;
+      try {
+        const response = await fetch(`/opra/search?q=${encodeURIComponent(this.opra.searchQuery)}`);
+        if (!response.ok) {
+          throw new Error('Search failed');
+        }
+        const data = await response.json();
+        this.opra.results = data.results || [];
+      } catch (error) {
+        console.error('Failed to search OPRA:', error);
+        this.opra.results = [];
+      } finally {
+        this.opra.searching = false;
+      }
+    },
+    selectHeadphone(result) {
+      this.opra.selected = result;
+      this.opra.results = [];
+      this.opra.searchQuery = result.name;
+      this.opra.eqProfiles = result.eq_profiles || [];
+      this.opra.selectedEqId = this.opra.eqProfiles[0]?.id || '';
+    },
+    async applyOPRA() {
+      if (!this.opra.selected || this.opraActionPending) {
+        return;
+      }
+
+      this.opraActionPending = true;
+      this.opraMessage = null;
+      this.opraError = null;
+      try {
+        const eqId = this.opra.selectedEqId || this.opra.eqProfiles[0]?.id;
+        if (!eqId) {
+          throw new Error('No EQ profile selected');
+        }
+
+        const endpoint = `/opra/apply/${encodeURIComponent(eqId)}?apply_correction=${this.opra.useModernTarget}`;
+        const response = await fetch(endpoint, { method: 'POST' });
+        if (!response.ok) {
+          const err = await response.json();
+          throw new Error(err.detail || 'Failed to apply OPRA EQ');
+        }
+
+        const data = await response.json();
+        this.opraMessage = data.message || 'OPRA EQ applied';
+        await this.fetchActive();
+        await this.fetchProfiles();
+      } catch (error) {
+        console.error('Failed to apply OPRA EQ:', error);
+        this.opraError = error.message || 'Failed to apply OPRA EQ';
+      } finally {
+        this.opraActionPending = false;
       }
     },
     handleFile(event) {
