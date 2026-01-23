@@ -1,5 +1,6 @@
 #include "audio/eq_to_fir.h"
 
+#include <algorithm>
 #include <cmath>
 #include <iostream>
 
@@ -157,8 +158,19 @@ std::vector<double> computeEqMagnitudeForFft(size_t filterFftSize,
                                                  outputSampleRate, profile);
 
   std::vector<double> magnitude(complexResponse.size());
+  double maxMagnitude = 0.0;
   for (size_t i = 0; i < complexResponse.size(); ++i) {
     magnitude[i] = std::abs(complexResponse[i]);
+    if (magnitude[i] > maxMagnitude) {
+      maxMagnitude = magnitude[i];
+    }
+  }
+
+  if (maxMagnitude > 1.0) {
+    double normalization = 1.0 / maxMagnitude;
+    for (double &value : magnitude) {
+      value *= normalization;
+    }
   }
 
   return magnitude;

@@ -1,5 +1,6 @@
 #include "audio/eq_to_fir.h"
 
+#include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <iostream>
@@ -53,10 +54,34 @@ void TestEqMagnitudeUnity() {
   }
 }
 
+void TestEqMagnitudeAutoNormalize() {
+  EqProfile profile;
+  EqBand band;
+  band.enabled = true;
+  band.type = FilterType::PK;
+  band.frequency = 1000.0;
+  band.gain = 6.0;
+  band.q = 1.0;
+  profile.bands.push_back(band);
+
+  size_t fftSize = 1024;
+  size_t numBins = fftSize / 2 + 1;
+  double outputRate = SAMPLE_RATE * 16;
+  auto magnitude =
+      computeEqMagnitudeForFft(numBins, fftSize, outputRate, profile);
+  assert(magnitude.size() == numBins);
+
+  double maxValue = *std::max_element(magnitude.begin(), magnitude.end());
+  double minValue = *std::min_element(magnitude.begin(), magnitude.end());
+  ExpectNear(maxValue, 1.0, 1e-6);
+  assert(minValue < 0.95);
+}
+
 int main() {
   TestBiquadUnity();
   TestFrequencyResponseAtCenter();
   TestEqMagnitudeUnity();
+  TestEqMagnitudeAutoNormalize();
   std::cout << "EQ to FIR smoke tests passed.\n";
   return 0;
 }
