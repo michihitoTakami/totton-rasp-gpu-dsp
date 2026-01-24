@@ -31,11 +31,11 @@ alsa_period=""
 alsa_buffer=""
 
 if [[ -f "$CONFIG_PATH" ]] && command -v jq >/dev/null 2>&1; then
-  config_alsa_in=$(jq -r '.alsa.inputDevice // empty' "$CONFIG_PATH")
-  config_alsa_out=$(jq -r '.alsa.outputDevice // empty' "$CONFIG_PATH")
-  config_alsa_rate=$(jq -r '.alsa.sampleRate // empty' "$CONFIG_PATH")
-  config_alsa_channels=$(jq -r '.alsa.channels // empty' "$CONFIG_PATH")
-  config_alsa_format=$(jq -r '.alsa.format // empty' "$CONFIG_PATH")
+  config_alsa_in=$(jq -r '.alsa.inputDevice // .alsaInputDevice // empty' "$CONFIG_PATH")
+  config_alsa_out=$(jq -r '.alsa.outputDevice // .alsaOutputDevice // empty' "$CONFIG_PATH")
+  config_alsa_rate=$(jq -r '.alsa.sampleRate // .alsaSampleRate // empty' "$CONFIG_PATH")
+  config_alsa_channels=$(jq -r '.alsa.channels // .alsaChannels // empty' "$CONFIG_PATH")
+  config_alsa_format=$(jq -r '.alsa.format // .alsaFormat // empty' "$CONFIG_PATH")
   config_alsa_period=$(jq -r '.alsa.periodFrames // empty' "$CONFIG_PATH")
   config_alsa_buffer=$(jq -r '.alsa.bufferFrames // empty' "$CONFIG_PATH")
 
