@@ -51,10 +51,11 @@ docker compose build
 ```
 
 Environment overrides (use `.env` or export):
-- `TOTTON_ALSA_IN` / `TOTTON_ALSA_OUT` (default: `hw:0,0`)
-- `TOTTON_ALSA_CHANNELS` / `TOTTON_ALSA_FORMAT` (default: `2` / `S32_LE`)
+- `TOTTON_ALSA_IN` / `TOTTON_ALSA_OUT` (override `config.json` when set)
+- `TOTTON_ALSA_CHANNELS` / `TOTTON_ALSA_FORMAT` (override `config.json` when set)
 - `TOTTON_FILTER_DIR` / `TOTTON_FILTER_RATIO` / `TOTTON_FILTER_PHASE`
 - `TOTTON_WEB_PORT` (default: `8080`)
+ALSA priority: `config.json` -> environment overrides (when set). Update ALSA settings and restart the container to apply.
 
 Auto-start on boot (example systemd unit running docker compose):
 ```ini
@@ -172,10 +173,11 @@ docker compose build
 ```
 
 環境変数の上書き（`.env` か export で設定）:
-- `TOTTON_ALSA_IN` / `TOTTON_ALSA_OUT`（既定: `hw:0,0`）
-- `TOTTON_ALSA_CHANNELS` / `TOTTON_ALSA_FORMAT`（既定: `2` / `S32_LE`）
+- `TOTTON_ALSA_IN` / `TOTTON_ALSA_OUT`（設定時のみ `config.json` を上書き）
+- `TOTTON_ALSA_CHANNELS` / `TOTTON_ALSA_FORMAT`（設定時のみ `config.json` を上書き）
 - `TOTTON_FILTER_DIR` / `TOTTON_FILTER_RATIO` / `TOTTON_FILTER_PHASE`
 - `TOTTON_WEB_PORT`（既定: `8080`）
+ALSA の優先順位: `config.json` → 環境変数（設定時のみ）。ALSA 設定を変更したらコンテナ再起動で反映。
 
 自動起動（docker compose を起動する systemd 例）:
 ```ini

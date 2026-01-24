@@ -10,11 +10,25 @@ mkdir -p "$(dirname "$CONFIG_PATH")" "$EQ_DIR"
 : "${TOTTON_ZMQ_PUB_ENDPOINT:=ipc:///tmp/totton_zmq_pub.sock}"
 : "${TOTTON_WEB_PORT:=8080}"
 
-: "${TOTTON_ALSA_IN:=hw:0,0}"
-: "${TOTTON_ALSA_OUT:=hw:0,0}"
 : "${TOTTON_FILTER_DIR:=/opt/totton-dsp/data/coefficients}"
 : "${TOTTON_FILTER_RATIO:=2}"
 : "${TOTTON_FILTER_PHASE:=min}"
+
+alsa_in_override="${TOTTON_ALSA_IN-}"
+alsa_out_override="${TOTTON_ALSA_OUT-}"
+alsa_rate_override="${TOTTON_ALSA_RATE-}"
+alsa_channels_override="${TOTTON_ALSA_CHANNELS-}"
+alsa_format_override="${TOTTON_ALSA_FORMAT-}"
+alsa_period_override="${TOTTON_ALSA_PERIOD-}"
+alsa_buffer_override="${TOTTON_ALSA_BUFFER-}"
+
+alsa_in=""
+alsa_out=""
+alsa_rate=""
+alsa_channels=""
+alsa_format=""
+alsa_period=""
+alsa_buffer=""
 
 if [[ -f "$CONFIG_PATH" ]] && command -v jq >/dev/null 2>&1; then
   config_alsa_in=$(jq -r '.alsa.inputDevice // empty' "$CONFIG_PATH")
@@ -30,25 +44,25 @@ if [[ -f "$CONFIG_PATH" ]] && command -v jq >/dev/null 2>&1; then
   config_filter_phase=$(jq -r '.filter.phaseType // empty' "$CONFIG_PATH")
 
   if [[ -n "$config_alsa_in" ]]; then
-    TOTTON_ALSA_IN="$config_alsa_in"
+    alsa_in="$config_alsa_in"
   fi
   if [[ -n "$config_alsa_out" ]]; then
-    TOTTON_ALSA_OUT="$config_alsa_out"
+    alsa_out="$config_alsa_out"
   fi
   if [[ "$config_alsa_rate" =~ ^[0-9]+$ ]] && [[ "$config_alsa_rate" -gt 0 ]]; then
-    TOTTON_ALSA_RATE="$config_alsa_rate"
+    alsa_rate="$config_alsa_rate"
   fi
   if [[ "$config_alsa_channels" =~ ^[0-9]+$ ]] && [[ "$config_alsa_channels" -gt 0 ]]; then
-    TOTTON_ALSA_CHANNELS="$config_alsa_channels"
+    alsa_channels="$config_alsa_channels"
   fi
   if [[ -n "$config_alsa_format" ]]; then
-    TOTTON_ALSA_FORMAT="$config_alsa_format"
+    alsa_format="$config_alsa_format"
   fi
   if [[ "$config_alsa_period" =~ ^[0-9]+$ ]] && [[ "$config_alsa_period" -gt 0 ]]; then
-    TOTTON_ALSA_PERIOD="$config_alsa_period"
+    alsa_period="$config_alsa_period"
   fi
   if [[ "$config_alsa_buffer" =~ ^[0-9]+$ ]] && [[ "$config_alsa_buffer" -gt 0 ]]; then
-    TOTTON_ALSA_BUFFER="$config_alsa_buffer"
+    alsa_buffer="$config_alsa_buffer"
   fi
 
   if [[ -n "$config_filter_dir" ]]; then
@@ -68,22 +82,51 @@ if [[ -f "$CONFIG_PATH" ]] && command -v jq >/dev/null 2>&1; then
   fi
 fi
 
-alsa_args=(--in "$TOTTON_ALSA_IN" --out "$TOTTON_ALSA_OUT")
+if [[ -n "$alsa_in_override" ]]; then
+  alsa_in="$alsa_in_override"
+fi
+if [[ -n "$alsa_out_override" ]]; then
+  alsa_out="$alsa_out_override"
+fi
+if [[ -n "$alsa_rate_override" ]]; then
+  alsa_rate="$alsa_rate_override"
+fi
+if [[ -n "$alsa_channels_override" ]]; then
+  alsa_channels="$alsa_channels_override"
+fi
+if [[ -n "$alsa_format_override" ]]; then
+  alsa_format="$alsa_format_override"
+fi
+if [[ -n "$alsa_period_override" ]]; then
+  alsa_period="$alsa_period_override"
+fi
+if [[ -n "$alsa_buffer_override" ]]; then
+  alsa_buffer="$alsa_buffer_override"
+fi
 
-if [[ -n "${TOTTON_ALSA_RATE:-}" ]]; then
-  alsa_args+=(--rate "$TOTTON_ALSA_RATE")
+if [[ -z "$alsa_in" ]]; then
+  alsa_in="hw:0,0"
 fi
-if [[ -n "${TOTTON_ALSA_CHANNELS:-}" ]]; then
-  alsa_args+=(--channels "$TOTTON_ALSA_CHANNELS")
+if [[ -z "$alsa_out" ]]; then
+  alsa_out="hw:0,0"
 fi
-if [[ -n "${TOTTON_ALSA_FORMAT:-}" ]]; then
-  alsa_args+=(--format "$TOTTON_ALSA_FORMAT")
+
+alsa_args=(--in "$alsa_in" --out "$alsa_out")
+
+if [[ -n "$alsa_rate" ]]; then
+  alsa_args+=(--rate "$alsa_rate")
 fi
-if [[ -n "${TOTTON_ALSA_PERIOD:-}" ]]; then
-  alsa_args+=(--period "$TOTTON_ALSA_PERIOD")
+if [[ -n "$alsa_channels" ]]; then
+  alsa_args+=(--channels "$alsa_channels")
 fi
-if [[ -n "${TOTTON_ALSA_BUFFER:-}" ]]; then
-  alsa_args+=(--buffer "$TOTTON_ALSA_BUFFER")
+if [[ -n "$alsa_format" ]]; then
+  alsa_args+=(--format "$alsa_format")
+fi
+if [[ -n "$alsa_period" ]]; then
+  alsa_args+=(--period "$alsa_period")
+fi
+if [[ -n "$alsa_buffer" ]]; then
+  alsa_args+=(--buffer "$alsa_buffer")
 fi
 
 if [[ -n "${TOTTON_FILTER_PATH:-}" ]]; then
