@@ -550,8 +550,8 @@ int main(int argc, char **argv) {
       }
 
       while (gRunning.load()) {
-        bool ready = outputBuffer->available() >=
-                     (blockOutputFrames * options.channels);
+        bool ready =
+            outputBuffer->available() >= (blockOutputFrames * options.channels);
         for (const auto &buffer : inputBuffers) {
           if (buffer.size() < blockInputFrames) {
             ready = false;
