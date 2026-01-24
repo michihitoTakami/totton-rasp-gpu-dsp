@@ -1,6 +1,7 @@
 {% extends "layout.html" %}
 {% import "components/buttons.html" as buttons %}
 {% import "components/card_panel.html" as panels %}
+{% import "components/forms.html" as forms %}
 {% import "components/slider_input.html" as sliders %}
 
 {% block content %}
@@ -147,6 +148,43 @@
     </div>
     <div class="notice" x-show="!profiles.length">No saved profiles yet.</div>
   {% endcall %}
+
+  {% call panels.card_panel("OPRA Sync") %}
+    <div class="info-row">
+      <div>
+        <div class="muted">Status</div>
+        <div class="mono" x-text="formatOpraStatus(opraSync.status?.status)"></div>
+      </div>
+      <span class="badge" :class="opraSyncBadgeClass()" x-text="opraSyncBadgeText()"></span>
+    </div>
+    <div class="info-row" style="margin-top: 12px;">
+      <div class="muted">Current Commit</div>
+      <div class="mono" x-text="opraSync.status?.current_commit || '—'"></div>
+    </div>
+    <div class="info-row">
+      <div class="muted">Previous Commit</div>
+      <div class="mono" x-text="opraSync.status?.previous_commit || '—'"></div>
+    </div>
+    <div class="info-row">
+      <div class="muted">Downloaded At</div>
+      <div class="mono" x-text="formatIso(opraSync.status?.current_metadata?.downloaded_at)"></div>
+    </div>
+    <div class="info-row" x-show="opraSync.status?.last_error">
+      <div class="muted">Last Error</div>
+      <div class="mono" x-text="opraSync.status?.last_error"></div>
+    </div>
+
+    {{ forms.text_input('opraSyncTarget', 'Source / Target', 'opraSync.targetRef', placeholder='latest or commit SHA', disabled='opraSync.loading || opraSync.status?.status === \"running\"') }}
+
+    <div class="profile-actions">
+      {{ buttons.btn_primary('Check Updates', click='checkOpraAvailable()', disabled='opraSync.loading') }}
+      {{ buttons.btn_primary('Update', click='startOpraUpdate()', disabled='opraSync.loading || opraSync.status?.status === \"running\"') }}
+      {{ buttons.btn_primary('Rollback', click='startOpraRollback()', disabled='opraSync.loading || opraSync.status?.status === \"running\" || !opraSync.status?.previous_commit', extra_class='btn-secondary') }}
+    </div>
+
+    <div class="notice success" x-show="opraSync.message" x-text="opraSync.message" style="margin-top: 16px;"></div>
+    <div class="notice error" x-show="opraSync.error" x-text="opraSync.error" style="margin-top: 16px;"></div>
+  {% endcall %}
 </div>
 
 <script>
@@ -156,6 +194,14 @@ function eqApp() {
     profiles: [],
     validation: null,
     upload: { file: null },
+    opraSync: {
+      targetRef: 'latest',
+      status: null,
+      available: null,
+      loading: false,
+      message: null,
+      error: null
+    },
     recommendedPreamp: 0,
     opra: {
       searchQuery: '',
@@ -185,18 +231,23 @@ function eqApp() {
     actionMessage: null,
     actionError: null,
     statusTimer: null,
+    opraTimer: null,
     init() {
       this.refreshAll();
       this.statusTimer = setInterval(() => {
         this.fetchStatus();
       }, 2000);
+      this.opraTimer = setInterval(() => {
+        this.fetchOpraSyncStatus();
+      }, 5000);
     },
     async refreshAll() {
       await Promise.all([
         this.fetchActive(),
         this.fetchProfiles(),
         this.fetchStatus(),
-        this.fetchPhase()
+        this.fetchPhase(),
+        this.fetchOpraSyncStatus()
       ]);
     },
     async fetchActive() {
@@ -234,6 +285,136 @@ function eqApp() {
       const data = await response.json();
       if (data.phase_type) {
         this.phaseType = data.phase_type;
+      }
+    },
+    formatIso(isoString) {
+      if (!isoString) {
+        return '—';
+      }
+      try {
+        return new Date(isoString).toLocaleString();
+      } catch (err) {
+        return String(isoString);
+      }
+    },
+    formatOpraStatus(status) {
+      const normalized = String(status || 'idle').toLowerCase();
+      if (normalized === 'running') return 'Running';
+      if (normalized === 'ready') return 'Ready';
+      if (normalized === 'failed') return 'Failed';
+      return 'Idle';
+    },
+    opraSyncBadgeClass() {
+      const normalized = String(this.opraSync.status?.status || 'idle').toLowerCase();
+      if (normalized === 'running') return 'badge-warning';
+      if (normalized === 'ready') return 'badge-on';
+      return 'badge-off';
+    },
+    opraSyncBadgeText() {
+      const normalized = String(this.opraSync.status?.status || 'idle').toLowerCase();
+      if (normalized === 'running') return 'RUNNING';
+      if (normalized === 'ready') return 'READY';
+      if (normalized === 'failed') return 'FAILED';
+      return 'IDLE';
+    },
+    resolveOpraSyncParams() {
+      const ref = String(this.opraSync.targetRef || '').trim();
+      const normalized = ref.toLowerCase();
+      const source = normalized === 'cloudflare' ? 'cloudflare' : 'github_raw';
+      const target =
+        normalized === '' ||
+        normalized === 'latest' ||
+        normalized === 'cloudflare' ||
+        normalized === 'github_raw'
+          ? 'latest'
+          : ref;
+      return { source, target };
+    },
+    async fetchOpraSyncStatus() {
+      try {
+        const response = await fetch('/api/opra/sync/status');
+        if (!response.ok) {
+          return;
+        }
+        const data = await response.json();
+        this.opraSync.status = data;
+      } catch (err) {
+        console.error('Failed to fetch OPRA sync status:', err);
+      }
+    },
+    async checkOpraAvailable() {
+      if (this.opraSync.loading) {
+        return;
+      }
+      const { source } = this.resolveOpraSyncParams();
+      this.opraSync.loading = true;
+      this.opraSync.message = null;
+      this.opraSync.error = null;
+      try {
+        const response = await fetch(`/api/opra/sync/available?source=${encodeURIComponent(source)}`);
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(data.detail || data.message || 'Failed to check updates');
+        }
+        this.opraSync.available = data;
+        this.opraSync.message = `Latest available: ${data.latest || 'unknown'}`;
+      } catch (err) {
+        this.opraSync.error = err.message || 'Failed to check updates';
+      } finally {
+        this.opraSync.loading = false;
+      }
+    },
+    async startOpraUpdate() {
+      if (this.opraSync.loading) {
+        return;
+      }
+      const { source, target } = this.resolveOpraSyncParams();
+      if (!confirm(`Start OPRA update (${target})?`)) {
+        return;
+      }
+      this.opraSync.loading = true;
+      this.opraSync.message = null;
+      this.opraSync.error = null;
+      try {
+        const response = await fetch('/api/opra/sync/update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ target, source })
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(data.detail || data.message || 'Failed to start update');
+        }
+        this.opraSync.message = 'OPRA update started';
+        await this.fetchOpraSyncStatus();
+      } catch (err) {
+        this.opraSync.error = err.message || 'Failed to start update';
+      } finally {
+        this.opraSync.loading = false;
+      }
+    },
+    async startOpraRollback() {
+      if (this.opraSync.loading) {
+        return;
+      }
+      if (!confirm('Rollback OPRA database to previous version?')) {
+        return;
+      }
+      this.opraSync.loading = true;
+      this.opraSync.message = null;
+      this.opraSync.error = null;
+      try {
+        const response = await fetch('/api/opra/sync/rollback', { method: 'POST' });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(data.detail || data.message || 'Failed to start rollback');
+        }
+        this.opraSync.message = 'OPRA rollback started';
+        await this.fetchOpraSyncStatus();
+      } catch (err) {
+        this.opraSync.error = err.message || 'Failed to start rollback';
+      } finally {
+        this.opraSync.loading = false;
       }
     },
     async searchOPRA() {
