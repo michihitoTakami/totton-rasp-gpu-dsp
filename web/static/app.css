@@ -266,6 +266,68 @@ input[type="range"] {
   font-size: 0.9rem;
 }
 
+.opra-results {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.opra-result-item {
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  border-bottom: 1px solid var(--border);
+}
+
+.opra-result-item:last-child {
+  border-bottom: none;
+}
+
+.opra-result-item:hover {
+  background: rgba(242, 201, 76, 0.08);
+}
+
+.opra-result-name {
+  font-weight: 600;
+}
+
+.opra-result-vendor {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.opra-selected {
+  border: 1px solid rgba(242, 201, 76, 0.2);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  background: rgba(242, 201, 76, 0.05);
+}
+
+.opra-selected-name {
+  font-weight: 600;
+}
+
+.opra-selected-vendor {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.info-text {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.opra-license a {
+  color: var(--accent);
+}
+
 @media (max-width: 720px) {
   .page {
     padding: 36px 18px 60px;

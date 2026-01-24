@@ -110,6 +110,79 @@ class EqActiveResponse(BaseModel):
     original_filters: list[str] = []
 
 
+class OpraStats(BaseModel):
+    """OPRA database statistics response model."""
+
+    vendors: int
+    products: int
+    eq_profiles: int
+    license: str = "CC BY-SA 4.0"
+    attribution: str = "OPRA Project (https://github.com/opra-project/OPRA)"
+
+
+class OpraVendorsResponse(BaseModel):
+    """OPRA vendors list response model."""
+
+    vendors: list[dict[str, Any]]
+    count: int
+
+
+class OpraVendor(BaseModel):
+    """OPRA vendor information model."""
+
+    id: str
+    name: str
+
+
+class OpraEqProfileInfo(BaseModel):
+    """OPRA EQ profile information model."""
+
+    id: str
+    author: str = ""
+    details: str = ""
+
+    model_config = {"extra": "allow"}
+
+
+class OpraSearchResult(BaseModel):
+    """OPRA search result item model."""
+
+    id: str
+    name: str
+    type: str
+    vendor: OpraVendor
+    eq_profiles: list[OpraEqProfileInfo]
+
+
+class OpraSearchResponse(BaseModel):
+    """OPRA search results response model."""
+
+    results: list[OpraSearchResult]
+    count: int
+    query: str
+
+
+class OpraEqAttribution(BaseModel):
+    """OPRA EQ attribution model."""
+
+    license: str = "CC BY-SA 4.0"
+    source: str = "OPRA Project"
+    author: str
+
+
+class OpraEqResponse(BaseModel):
+    """OPRA EQ profile response model."""
+
+    id: str
+    name: str
+    author: str
+    details: str
+    parameters: dict[str, Any] = {}
+    apo_format: str
+    modern_target_applied: bool
+    attribution: OpraEqAttribution
+
+
 class ApiResponse(BaseModel):
     """Standard API response model for mutations."""
 
