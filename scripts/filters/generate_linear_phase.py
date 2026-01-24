@@ -35,11 +35,8 @@ class LinearPhaseDesigner:
         cutoff = (self.config.passband_end + self.config.stopband_start) / 2
         nyquist = self.config.output_rate / 2
         normalized_cutoff = cutoff / nyquist
-        numtaps = (
-            self.config.n_taps
-            if self.config.n_taps % 2 == 1
-            else self.config.n_taps + 1
-        )
+        aligned_taps = self.config.aligned_taps
+        numtaps = aligned_taps if aligned_taps % 2 == 1 else aligned_taps + 1
         print("線形位相フィルタ設計中...")
         print(f"  タップ数: {numtaps}")
         print(f"  カットオフ周波数: {cutoff} Hz (正規化: {normalized_cutoff:.6f})")

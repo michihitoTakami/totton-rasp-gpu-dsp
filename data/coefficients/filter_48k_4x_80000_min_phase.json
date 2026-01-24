@@ -1,7 +1,7 @@
 {
   "generation_date": "2026-01-18T21:47:27.010513",
   "n_taps_specified": 80000,
-  "n_taps_actual": 80000,
+  "n_taps_actual": 80001,
   "sample_rate_input": 192000,
   "sample_rate_output": 768000,
   "upsample_ratio": 4,
@@ -23,7 +23,7 @@
     "meets_stopband_spec": true,
     "is_minimum_phase": true,
     "is_symmetric": false,
-    "actual_taps": 80000,
+    "actual_taps": 80001,
     "normalization": {
       "original_dc_gain": 1.0000003219158617,
       "target_dc_gain": 4.0,
@@ -35,5 +35,10 @@
       "max_coefficient_amplitude": 0.7797295578783554,
       "normalization_applied": true
     }
-  }
+  },
+  "taps": 80001,
+  "fft_size": 131072,
+  "block_size": 51072,
+  "coefficients_bin": "filter_48k_4x_80000_min_phase.bin",
+  "upsample_factor": 4
 }
