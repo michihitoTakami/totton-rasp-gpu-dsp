@@ -244,6 +244,9 @@ std::optional<AlsaHandle>
 OpenCaptureAutoRate(const std::string &device, snd_pcm_format_t format,
                     unsigned int channels, unsigned int requestedRate,
                     snd_pcm_uframes_t period, snd_pcm_uframes_t buffer) {
+  if (period == 0) {
+    period = 1024;
+  }
   if (requestedRate != 0) {
     return OpenPcm(device, SND_PCM_STREAM_CAPTURE, format, channels,
                    requestedRate, period, buffer);
