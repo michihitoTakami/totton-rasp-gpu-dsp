@@ -188,6 +188,15 @@ textarea {
   border-radius: var(--radius-md);
 }
 
+select {
+  background-color: rgba(15, 19, 26, 0.85);
+}
+
+select option {
+  background: var(--bg-card);
+  color: var(--text-primary);
+}
+
 textarea {
   min-height: 140px;
   font-family: var(--mono);
