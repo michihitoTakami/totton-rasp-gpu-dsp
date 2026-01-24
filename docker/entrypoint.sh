@@ -108,4 +108,5 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
-wait -n "$ZMQ_PID" "$ALSA_PID" "$WEB_PID"
+# Keep container alive as long as control plane is running.
+wait "$ZMQ_PID"
