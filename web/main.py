@@ -5,7 +5,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from .routers import alsa, config, daemon, eq, opra, status, ui
+from .routers import alsa, config, daemon, eq, opra, opra_sync, status, ui
 
 app = FastAPI(title="Totton EQ Control")
 
@@ -16,6 +16,7 @@ app.include_router(ui.router)
 app.include_router(eq.router)
 app.include_router(eq.router, prefix="/api")
 app.include_router(opra.router)
+app.include_router(opra_sync.router)
 app.include_router(status.router, prefix="/api")
 app.include_router(daemon.router, prefix="/api")
 app.include_router(alsa.router, prefix="/api")
