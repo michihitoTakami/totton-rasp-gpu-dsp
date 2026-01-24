@@ -37,6 +37,49 @@ std::atomic<bool> gRunning{true};
 
 void SignalHandler(int) { gRunning.store(false); }
 
+class FloatRingBuffer {
+public:
+  explicit FloatRingBuffer(std::size_t capacity)
+      : data_(std::max<std::size_t>(capacity, 1), 0.0f) {}
+
+  std::size_t size() const { return size_; }
+  std::size_t capacity() const { return data_.size(); }
+  std::size_t available() const { return data_.size() - size_; }
+
+  bool Push(const float *input, std::size_t count) {
+    if (!input || count > available()) {
+      return false;
+    }
+    for (std::size_t i = 0; i < count; ++i) {
+      data_[(head_ + size_ + i) % data_.size()] = input[i];
+    }
+    size_ += count;
+    return true;
+  }
+
+  bool Pop(float *output, std::size_t count) {
+    if (!output || count > size_) {
+      return false;
+    }
+    for (std::size_t i = 0; i < count; ++i) {
+      output[i] = data_[(head_ + i) % data_.size()];
+    }
+    head_ = (head_ + count) % data_.size();
+    size_ -= count;
+    return true;
+  }
+
+  void Clear() {
+    head_ = 0;
+    size_ = 0;
+  }
+
+private:
+  std::vector<float> data_;
+  std::size_t head_ = 0;
+  std::size_t size_ = 0;
+};
+
 void PrintUsage(const char *argv0) {
   std::cout
       << "Usage: " << argv0 << " --in <device> --out <device> [options]\n"
@@ -422,18 +465,16 @@ int main(int argc, char **argv) {
 
   unsigned int outputRate = capture->rate;
   std::size_t upsampleFactor = 1;
+  std::size_t blockInputFrames = capture->periodFrames;
+  std::size_t blockOutputFrames = capture->periodFrames;
   if (filterConfig) {
     upsampleFactor = std::max<std::size_t>(filterConfig->upsampleFactor, 1);
     outputRate = static_cast<unsigned int>(capture->rate * upsampleFactor);
-    if (upsampleFactor > 1) {
-      const auto expectedInputFrames = static_cast<snd_pcm_uframes_t>(
-          filterConfig->blockSize / upsampleFactor);
-      if (capture->periodFrames != expectedInputFrames) {
-        std::cerr << "ALSA capture period mismatch: expected "
-                  << expectedInputFrames << " frames, got "
-                  << capture->periodFrames << " frames\n";
-        return 1;
-      }
+    blockOutputFrames = filterConfig->blockSize;
+    blockInputFrames = filterConfig->blockSize / upsampleFactor;
+    if (blockInputFrames == 0) {
+      std::cerr << "Invalid filter block size for input buffering\n";
+      return 1;
     }
   }
 
@@ -452,10 +493,32 @@ int main(int argc, char **argv) {
   std::vector<float> floatBuffer;
   std::vector<float> processed;
   std::vector<uint8_t> outBuffer;
+  std::vector<FloatRingBuffer> inputBuffers;
+  std::optional<FloatRingBuffer> outputBuffer;
+  std::vector<std::vector<float>> channelBlocks;
+  std::vector<float> interleavedBlock;
 
   std::cerr << "ALSA streaming started: input " << capture->rate << " Hz, "
             << "output " << outputRate << " Hz, "
             << "period " << capture->periodFrames << " frames\n";
+
+  if (!channelUpsamplers.empty()) {
+    const std::size_t inputCapacity =
+        std::max(blockInputFrames, static_cast<size_t>(capture->periodFrames)) *
+        3;
+    const std::size_t outputCapacityFrames =
+        std::max(blockOutputFrames, outputFrames) * 3;
+
+    inputBuffers.reserve(options.channels);
+    for (unsigned int ch = 0; ch < options.channels; ++ch) {
+      inputBuffers.emplace_back(inputCapacity);
+    }
+    outputBuffer.emplace(outputCapacityFrames * options.channels);
+
+    channelBlocks.assign(options.channels,
+                         std::vector<float>(blockInputFrames, 0.0f));
+    interleavedBlock.assign(blockOutputFrames * options.channels, 0.0f);
+  }
 
   while (gRunning.load()) {
     if (!totton::alsa::ReadFull(capture->handle, rawBuffer.data(),
@@ -470,8 +533,6 @@ int main(int argc, char **argv) {
       break;
     }
 
-    processed.assign(outputFrames * options.channels, 0.0f);
-
     if (!channelUpsamplers.empty()) {
       const size_t frames = capture->periodFrames;
       for (unsigned int ch = 0; ch < options.channels; ++ch) {
@@ -479,29 +540,89 @@ int main(int argc, char **argv) {
         for (size_t i = 0; i < frames; ++i) {
           channel[i] = floatBuffer[i * options.channels + ch];
         }
-        std::vector<float> out =
-            channelUpsamplers[ch].ProcessBlock(channel.data(), channel.size());
-        if (out.size() != outputFrames) {
-          std::cerr << "Filter output size mismatch\n";
-          gRunning.store(false);
+        if (!inputBuffers[ch].Push(channel.data(), channel.size())) {
+          std::cerr << "Input buffer overflow; dropping accumulated audio\n";
+          for (auto &buffer : inputBuffers) {
+            buffer.Clear();
+          }
           break;
         }
-        for (size_t i = 0; i < outputFrames; ++i) {
-          processed[i * options.channels + ch] = out[i];
+      }
+
+      while (gRunning.load()) {
+        bool ready = outputBuffer->available() >=
+                     (blockOutputFrames * options.channels);
+        for (const auto &buffer : inputBuffers) {
+          if (buffer.size() < blockInputFrames) {
+            ready = false;
+            break;
+          }
+        }
+        if (!ready) {
+          break;
+        }
+
+        for (unsigned int ch = 0; ch < options.channels; ++ch) {
+          if (!inputBuffers[ch].Pop(channelBlocks[ch].data(),
+                                    channelBlocks[ch].size())) {
+            gRunning.store(false);
+            break;
+          }
+          std::vector<float> out = channelUpsamplers[ch].ProcessBlock(
+              channelBlocks[ch].data(), channelBlocks[ch].size());
+          if (out.size() != blockOutputFrames) {
+            std::cerr << "Filter output size mismatch\n";
+            gRunning.store(false);
+            break;
+          }
+          for (size_t i = 0; i < blockOutputFrames; ++i) {
+            interleavedBlock[i * options.channels + ch] = out[i];
+          }
+        }
+        if (!gRunning.load()) {
+          break;
+        }
+        if (!outputBuffer->Push(interleavedBlock.data(),
+                                interleavedBlock.size())) {
+          std::cerr << "Output buffer overflow; dropping accumulated audio\n";
+          outputBuffer->Clear();
+          break;
         }
       }
     } else {
       processed = floatBuffer;
     }
 
-    if (!totton::alsa::ConvertFloatToPcm(processed, format, &outBuffer)) {
-      std::cerr << "PCM output conversion failed\n";
-      break;
-    }
+    if (channelUpsamplers.empty()) {
+      if (!totton::alsa::ConvertFloatToPcm(processed, format, &outBuffer)) {
+        std::cerr << "PCM output conversion failed\n";
+        break;
+      }
 
-    if (!totton::alsa::WriteFull(playback->handle, outBuffer.data(),
-                                 outputFrames, gRunning)) {
-      break;
+      if (!totton::alsa::WriteFull(playback->handle, outBuffer.data(),
+                                   outputFrames, gRunning)) {
+        break;
+      }
+    } else {
+      processed.assign(outputFrames * options.channels, 0.0f);
+      while (outputBuffer->size() >= outputFrames * options.channels &&
+             gRunning.load()) {
+        if (!outputBuffer->Pop(processed.data(),
+                               outputFrames * options.channels)) {
+          std::cerr << "Output buffer underrun\n";
+          break;
+        }
+        if (!totton::alsa::ConvertFloatToPcm(processed, format, &outBuffer)) {
+          std::cerr << "PCM output conversion failed\n";
+          gRunning.store(false);
+          break;
+        }
+        if (!totton::alsa::WriteFull(playback->handle, outBuffer.data(),
+                                     outputFrames, gRunning)) {
+          gRunning.store(false);
+          break;
+        }
+      }
     }
   }
 
