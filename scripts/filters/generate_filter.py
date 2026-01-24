@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+from numbers import Integral
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
@@ -459,6 +460,8 @@ def validate_tap_count(taps: int, upsample_ratio: int) -> None:
 
 
 def compute_padded_taps(n_taps: int, upsample_ratio: int) -> int:
+    if not isinstance(upsample_ratio, Integral):
+        raise ValueError("アップサンプリング比率は正の整数である必要があります")
     if upsample_ratio <= 0:
         raise ValueError("アップサンプリング比率は正の整数である必要があります")
     remainder = (n_taps - 1) % upsample_ratio
