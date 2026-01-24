@@ -17,6 +17,7 @@ from scripts.filters.generate_filter import (
     MinimumPhaseMethod,
     MULTI_RATE_CONFIGS,
     calculate_safe_gain,
+    compute_padded_taps,
     normalize_coefficients,
     validate_tap_count,
 )
@@ -172,17 +173,17 @@ class TestValidateTapCount:
     """Tests for validate_tap_count function."""
 
     def test_valid_tap_count_divisible_by_16(self):
-        """Tap count divisible by 16 should pass."""
+        """Tap count where (taps-1) is divisible by 16 should pass."""
 
         # Should not raise
-        validate_tap_count(1600, 16)
-        validate_tap_count(2_000_000, 16)
+        validate_tap_count(1601, 16)
+        validate_tap_count(2_000_001, 16)
 
     def test_invalid_tap_count_not_divisible(self):
-        """Tap count not divisible by upsample ratio should raise."""
+        """Tap count not aligned to upsample ratio should be padded."""
 
-        with pytest.raises(ValueError, match="倍数である必要があります"):
-            validate_tap_count(1601, 16)
+        validate_tap_count(1600, 16)
+        assert compute_padded_taps(1600, 16) == 1601
 
     def test_valid_tap_count_different_ratio(self):
         """Different upsample ratios should work."""
@@ -370,7 +371,7 @@ class TestCoefficientFileLoading:
 
         h = np.fromfile(coeff_path, dtype=np.float32)
 
-        assert len(h) == 80_000
+        assert len(h) == 80_001
         assert np.isfinite(h).all()
 
     def test_load_48k_16x_coefficients(self, coefficients_dir):
@@ -382,7 +383,7 @@ class TestCoefficientFileLoading:
 
         h = np.fromfile(coeff_path, dtype=np.float32)
 
-        assert len(h) == 80_000
+        assert len(h) == 80_001
         assert np.isfinite(h).all()
 
     def test_coefficient_dc_gain_matches_ratio(self, coefficients_dir):
@@ -581,26 +582,13 @@ class TestValidateTapCountMultiRate:
     """Tests for tap count validation with different ratios."""
 
     def test_tap_count_divisible_by_ratio(self):
-        """Tap count must be divisible by upsample ratio."""
+        """Tap count should align so (taps-1) is divisible by upsample ratio."""
 
         # All ratios used in multi-rate
         for ratio in [16, 8, 4, 2]:
             # Valid tap count (divisible)
-            validate_tap_count(1024, ratio)  # 1024 is divisible by all
-
-        # Invalid cases
-        with pytest.raises(ValueError):
-            validate_tap_count(1025, 16)  # Not divisible by 16
-
-        with pytest.raises(ValueError):
-            validate_tap_count(1025, 8)  # Not divisible by 8
-
-        with pytest.raises(ValueError):
-            validate_tap_count(1025, 4)  # Not divisible by 4
-
-        # 1025 IS divisible by... nothing here that we use
-        with pytest.raises(ValueError):
-            validate_tap_count(1025, 2)  # Not divisible by 2
+            validate_tap_count(1025, ratio)
+            assert compute_padded_taps(1024, ratio) == 1025
 
 
 class TestFilterConfigErrorHandling:
@@ -734,10 +722,10 @@ class TestValidateTapCountErrorHandling:
     """Tests for error handling in validate_tap_count."""
 
     def test_non_multiple_ratio_raises_error(self):
-        """validate_tap_count should raise ValueError for non-multiple taps."""
+        """validate_tap_count should raise ValueError for non-integer ratio."""
 
         # Float ratio will cause non-integer result, raising ValueError
-        with pytest.raises(ValueError, match="倍数である必要があります"):
+        with pytest.raises(ValueError, match="アップサンプリング比率"):
             validate_tap_count(1024, 16.5)
 
     def test_zero_ratio_raises_error(self):

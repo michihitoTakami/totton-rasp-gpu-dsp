@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+from numbers import Integral
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
@@ -98,6 +99,10 @@ class FilterConfig:
     @property
     def final_taps(self) -> int:
         return self.n_taps
+
+    @property
+    def aligned_taps(self) -> int:
+        return compute_padded_taps(self.n_taps, self.upsample_ratio)
 
     @property
     def taps_label(self) -> str:
@@ -201,7 +206,7 @@ class FilterExporter:
 
     def _export_metadata(self, metadata: dict[str, Any], base_name: str) -> None:
         # 必須フィールドを追加
-        actual_taps = metadata.get("n_taps_actual", self.config.final_taps)
+        actual_taps = metadata.get("n_taps_actual", self.config.aligned_taps)
         fft_size = 2 ** int(np.ceil(np.log2(actual_taps)))
         block_size = fft_size - (actual_taps - 1)
 
@@ -440,17 +445,29 @@ class FilterValidator:
 
 
 def validate_tap_count(taps: int, upsample_ratio: int) -> None:
-    if taps % upsample_ratio != 0:
-        raise ValueError(
-            f"タップ数 {taps:,} はアップサンプリング比率 {upsample_ratio} の倍数である必要があります。"
+    aligned_taps = compute_padded_taps(taps, upsample_ratio)
+    if aligned_taps != taps:
+        print(
+            "タップ数 "
+            f"{taps:,} はアップサンプリング比率 {upsample_ratio} に合わせて "
+            f"{aligned_taps:,} にパディングします"
         )
-    print(f"タップ数 {taps:,} は {upsample_ratio} の倍数です")
+        return
+    print(
+        "タップ数 "
+        f"{taps:,} は (タップ数-1) がアップサンプリング比率 {upsample_ratio} の倍数です"
+    )
 
 
 def compute_padded_taps(n_taps: int, upsample_ratio: int) -> int:
-    if n_taps % upsample_ratio == 0:
+    if not isinstance(upsample_ratio, Integral):
+        raise ValueError("アップサンプリング比率は正の整数である必要があります")
+    if upsample_ratio <= 0:
+        raise ValueError("アップサンプリング比率は正の整数である必要があります")
+    remainder = (n_taps - 1) % upsample_ratio
+    if remainder == 0:
         return n_taps
-    return ((n_taps // upsample_ratio) + 1) * upsample_ratio
+    return n_taps + (upsample_ratio - remainder)
 
 
 def normalize_coefficients(

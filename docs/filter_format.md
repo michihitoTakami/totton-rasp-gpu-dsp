@@ -21,4 +21,5 @@ The Vulkan upsampler expects a JSON sidecar that describes the raw float32 tap f
 - `fft_size` must be a power of two.
 - `block_size` must be smaller than `fft_size`.
 - `fft_size - block_size` must equal `taps - 1` for overlap-save.
-- `upsample_factor` is reserved for future use and defaults to `1`.
+- `upsample_factor` is required for upsampling configs and defaults to `1`.
+- `block_size` must be divisible by `upsample_factor` when upsampling.
