@@ -573,7 +573,8 @@ int main(int argc, char **argv) {
     } else {
       processed.assign(outputFrames * options.channels, 0.0f);
       bool wroteOutput = false;
-      while (outputBuffer.availableToRead() >= outputFrames * options.channels &&
+      while (outputBuffer.availableToRead() >=
+                 outputFrames * options.channels &&
              gRunning.load()) {
         if (!outputBuffer.read(processed.data(),
                                outputFrames * options.channels)) {

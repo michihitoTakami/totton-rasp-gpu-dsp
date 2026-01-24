@@ -47,8 +47,10 @@ bool TestWriteUpdatesAvailable() {
   if (!Expect(buffer.write(data.data(), 100), "Write succeeds")) {
     return false;
   }
-  return ExpectSizeEq(buffer.availableToRead(), 100, "Write updates read size") &&
-         ExpectSizeEq(buffer.availableToWrite(), 924, "Write updates write size");
+  return ExpectSizeEq(buffer.availableToRead(), 100,
+                      "Write updates read size") &&
+         ExpectSizeEq(buffer.availableToWrite(), 924,
+                      "Write updates write size");
 }
 
 bool TestWriteFailsWhenFull() {
@@ -81,7 +83,8 @@ bool TestReadUpdatesAvailable() {
     return false;
   }
   return ExpectSizeEq(buffer.availableToRead(), 50, "Read updates read size") &&
-         ExpectSizeEq(buffer.availableToWrite(), 974, "Read updates write size");
+         ExpectSizeEq(buffer.availableToWrite(), 974,
+                      "Read updates write size");
 }
 
 bool TestReadFailsWhenEmpty() {
@@ -283,7 +286,8 @@ bool TestConcurrentAccessStressSequence() {
     std::uniform_int_distribution<size_t> dist(1, maxChunk);
     std::vector<float> data(maxChunk);
     size_t written = 0;
-    while (written < totalSamples && !mismatch.load(std::memory_order_relaxed)) {
+    while (written < totalSamples &&
+           !mismatch.load(std::memory_order_relaxed)) {
       size_t chunk = std::min(dist(rng), totalSamples - written);
       if (buffer.availableToWrite() < chunk) {
         std::this_thread::yield();
@@ -365,8 +369,10 @@ int main() {
       {"WrapAroundWriteThenRead", TestWrapAroundWriteThenRead},
       {"ClearResetsBuffer", TestClearResetsBuffer},
       {"MultipleWriteReadCycles", TestMultipleWriteReadCycles},
-      {"UninitializedWriteReturnsFalse", TestUninitializedBufferWriteReturnsFalse},
-      {"UninitializedReadReturnsFalse", TestUninitializedBufferReadReturnsFalse},
+      {"UninitializedWriteReturnsFalse",
+       TestUninitializedBufferWriteReturnsFalse},
+      {"UninitializedReadReturnsFalse",
+       TestUninitializedBufferReadReturnsFalse},
       {"ConcurrentAccessSpscPattern", TestConcurrentAccessSpscPattern},
       {"ConcurrentAccessStressSequence", TestConcurrentAccessStressSequence},
   };
