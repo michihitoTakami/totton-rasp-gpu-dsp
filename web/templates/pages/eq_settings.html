@@ -155,7 +155,7 @@
         <div class="muted">Status</div>
         <div class="mono" x-text="formatOpraStatus(opraSync.status?.status)"></div>
       </div>
-      <span class="badge" :class="opraSync.status?.status === 'running' ? 'badge-warning' : 'badge-on'" x-text="opraSync.status?.status === 'running' ? 'RUNNING' : 'READY'"></span>
+      <span class="badge" :class="opraSyncBadgeClass()" x-text="opraSyncBadgeText()"></span>
     </div>
     <div class="info-row" style="margin-top: 12px;">
       <div class="muted">Current Commit</div>
@@ -303,6 +303,19 @@ function eqApp() {
       if (normalized === 'ready') return 'Ready';
       if (normalized === 'failed') return 'Failed';
       return 'Idle';
+    },
+    opraSyncBadgeClass() {
+      const normalized = String(this.opraSync.status?.status || 'idle').toLowerCase();
+      if (normalized === 'running') return 'badge-warning';
+      if (normalized === 'ready') return 'badge-on';
+      return 'badge-off';
+    },
+    opraSyncBadgeText() {
+      const normalized = String(this.opraSync.status?.status || 'idle').toLowerCase();
+      if (normalized === 'running') return 'RUNNING';
+      if (normalized === 'ready') return 'READY';
+      if (normalized === 'failed') return 'FAILED';
+      return 'IDLE';
     },
     resolveOpraSyncParams() {
       const ref = String(this.opraSync.targetRef || '').trim();
