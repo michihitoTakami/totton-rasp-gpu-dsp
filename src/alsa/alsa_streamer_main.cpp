@@ -605,6 +605,7 @@ int main(int argc, char **argv) {
       }
     } else {
       processed.assign(outputFrames * options.channels, 0.0f);
+      bool wroteOutput = false;
       while (outputBuffer->size() >= outputFrames * options.channels &&
              gRunning.load()) {
         if (!outputBuffer->Pop(processed.data(),
@@ -621,6 +622,16 @@ int main(int argc, char **argv) {
                                      outputFrames, gRunning)) {
           gRunning.store(false);
           break;
+        }
+        wroteOutput = true;
+      }
+      if (!wroteOutput && gRunning.load()) {
+        if (!totton::alsa::ConvertFloatToPcm(processed, format, &outBuffer)) {
+          std::cerr << "PCM output conversion failed\n";
+          gRunning.store(false);
+        } else if (!totton::alsa::WriteFull(playback->handle, outBuffer.data(),
+                                            outputFrames, gRunning)) {
+          gRunning.store(false);
         }
       }
     }
