@@ -135,6 +135,15 @@ if(ENABLE_ALSA)
         )
         target_link_libraries(auto_negotiation_smoke PRIVATE auto_negotiation)
         add_test(NAME auto_negotiation_smoke COMMAND auto_negotiation_smoke)
+
+        add_executable(audio_ring_buffer_smoke
+            tests/cpp/audio/test_audio_ring_buffer.cpp
+        )
+        target_include_directories(audio_ring_buffer_smoke
+            PRIVATE
+                ${CMAKE_CURRENT_SOURCE_DIR}/include
+        )
+        add_test(NAME audio_ring_buffer_smoke COMMAND audio_ring_buffer_smoke)
     endif()
 endif()
 

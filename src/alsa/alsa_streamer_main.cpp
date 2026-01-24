@@ -1,5 +1,6 @@
 #include "alsa/alsa_common.h"
 #include "alsa/alsa_filter_selector.h"
+#include "io/audio_ring_buffer.h"
 
 #include <algorithm>
 #include <atomic>
@@ -7,6 +8,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <memory>
 #include <optional>
 #include <string>
 #include <vector>
@@ -37,49 +39,6 @@ std::atomic<bool> gRunning{true};
 
 void SignalHandler(int) { gRunning.store(false); }
 
-class FloatRingBuffer {
-public:
-  explicit FloatRingBuffer(std::size_t capacity)
-      : data_(std::max<std::size_t>(capacity, 1), 0.0f) {}
-
-  std::size_t size() const { return size_; }
-  std::size_t capacity() const { return data_.size(); }
-  std::size_t available() const { return data_.size() - size_; }
-
-  bool Push(const float *input, std::size_t count) {
-    if (!input || count > available()) {
-      return false;
-    }
-    for (std::size_t i = 0; i < count; ++i) {
-      data_[(head_ + size_ + i) % data_.size()] = input[i];
-    }
-    size_ += count;
-    return true;
-  }
-
-  bool Pop(float *output, std::size_t count) {
-    if (!output || count > size_) {
-      return false;
-    }
-    for (std::size_t i = 0; i < count; ++i) {
-      output[i] = data_[(head_ + i) % data_.size()];
-    }
-    head_ = (head_ + count) % data_.size();
-    size_ -= count;
-    return true;
-  }
-
-  void Clear() {
-    head_ = 0;
-    size_ = 0;
-  }
-
-private:
-  std::vector<float> data_;
-  std::size_t head_ = 0;
-  std::size_t size_ = 0;
-};
-
 void PrintUsage(const char *argv0) {
   std::cout
       << "Usage: " << argv0 << " --in <device> --out <device> [options]\n"
@@ -99,8 +58,8 @@ void PrintUsage(const char *argv0) {
          "omitted)\n"
       << "  --channels <n>          Channel count (default: 2)\n"
       << "  --format <s16|s24|s32>  PCM format (default: s32)\n"
-      << "  --period <frames>       ALSA period frames (default: filter block "
-         "size)\n"
+      << "  --period <frames>       ALSA period frames (default: 1024; "
+         "clamped when filter is active)\n"
       << "  --buffer <frames>       ALSA buffer frames (default: period*4)\n"
       << "  --help                  Show this help\n";
 }
@@ -429,23 +388,33 @@ int main(int argc, char **argv) {
                      &filterConfig)) {
     return 1;
   }
+  std::size_t upsampleFactor = 1;
+  std::size_t blockInputFrames = 0;
+  std::size_t blockOutputFrames = 0;
   if (filterConfig) {
-    if (filterConfig->upsampleFactor > 1) {
-      const std::size_t inputFrames =
-          filterConfig->blockSize / filterConfig->upsampleFactor;
-      if (inputFrames == 0) {
-        std::cerr << "Invalid filter block size for upsampling.\n";
-        return 1;
-      }
-      options.periodFrames = static_cast<unsigned int>(inputFrames);
-    } else {
-      options.periodFrames = static_cast<unsigned int>(filterConfig->blockSize);
+    upsampleFactor = std::max<std::size_t>(filterConfig->upsampleFactor, 1);
+    blockOutputFrames = filterConfig->blockSize;
+    blockInputFrames = filterConfig->blockSize / upsampleFactor;
+    if (blockInputFrames == 0) {
+      std::cerr << "Invalid filter block size for input buffering.\n";
+      return 1;
     }
   }
 
   unsigned int periodFrames = options.periodFrames;
-  if (periodFrames == 0) {
+  if (fileMode && blockInputFrames > 0) {
+    periodFrames = static_cast<unsigned int>(blockInputFrames);
+  } else if (periodFrames == 0) {
     periodFrames = 1024;
+    if (blockInputFrames > 0) {
+      periodFrames = static_cast<unsigned int>(
+          std::min<std::size_t>(periodFrames, blockInputFrames));
+    }
+  } else if (!fileMode && blockInputFrames > 0 &&
+             periodFrames > blockInputFrames) {
+    std::cerr << "ALSA period is larger than filter input block; clamping to "
+              << blockInputFrames << " frames\n";
+    periodFrames = static_cast<unsigned int>(blockInputFrames);
   }
 
   if (fileMode) {
@@ -464,18 +433,12 @@ int main(int argc, char **argv) {
   }
 
   unsigned int outputRate = capture->rate;
-  std::size_t upsampleFactor = 1;
-  std::size_t blockInputFrames = capture->periodFrames;
-  std::size_t blockOutputFrames = capture->periodFrames;
+  std::size_t streamInputFrames = capture->periodFrames;
+  std::size_t streamOutputFrames = capture->periodFrames;
   if (filterConfig) {
-    upsampleFactor = std::max<std::size_t>(filterConfig->upsampleFactor, 1);
     outputRate = static_cast<unsigned int>(capture->rate * upsampleFactor);
-    blockOutputFrames = filterConfig->blockSize;
-    blockInputFrames = filterConfig->blockSize / upsampleFactor;
-    if (blockInputFrames == 0) {
-      std::cerr << "Invalid filter block size for input buffering\n";
-      return 1;
-    }
+    streamInputFrames = blockInputFrames;
+    streamOutputFrames = blockOutputFrames;
   }
 
   const auto outputFrames =
@@ -493,8 +456,8 @@ int main(int argc, char **argv) {
   std::vector<float> floatBuffer;
   std::vector<float> processed;
   std::vector<uint8_t> outBuffer;
-  std::vector<FloatRingBuffer> inputBuffers;
-  std::optional<FloatRingBuffer> outputBuffer;
+  std::vector<std::unique_ptr<AudioRingBuffer>> inputBuffers;
+  AudioRingBuffer outputBuffer;
   std::vector<std::vector<float>> channelBlocks;
   std::vector<float> interleavedBlock;
 
@@ -504,20 +467,24 @@ int main(int argc, char **argv) {
 
   if (!channelUpsamplers.empty()) {
     const std::size_t inputCapacity =
-        std::max(blockInputFrames, static_cast<size_t>(capture->periodFrames)) *
+        std::max(streamInputFrames,
+                 static_cast<size_t>(capture->periodFrames)) *
         3;
     const std::size_t outputCapacityFrames =
-        std::max(blockOutputFrames, outputFrames) * 3;
+        std::max(streamOutputFrames, outputFrames) * 3;
 
+    inputBuffers.clear();
     inputBuffers.reserve(options.channels);
     for (unsigned int ch = 0; ch < options.channels; ++ch) {
-      inputBuffers.emplace_back(inputCapacity);
+      auto buffer = std::make_unique<AudioRingBuffer>();
+      buffer->init(inputCapacity);
+      inputBuffers.emplace_back(std::move(buffer));
     }
-    outputBuffer.emplace(outputCapacityFrames * options.channels);
+    outputBuffer.init(outputCapacityFrames * options.channels);
 
     channelBlocks.assign(options.channels,
-                         std::vector<float>(blockInputFrames, 0.0f));
-    interleavedBlock.assign(blockOutputFrames * options.channels, 0.0f);
+                         std::vector<float>(streamInputFrames, 0.0f));
+    interleavedBlock.assign(streamOutputFrames * options.channels, 0.0f);
   }
 
   while (gRunning.load()) {
@@ -540,20 +507,20 @@ int main(int argc, char **argv) {
         for (size_t i = 0; i < frames; ++i) {
           channel[i] = floatBuffer[i * options.channels + ch];
         }
-        if (!inputBuffers[ch].Push(channel.data(), channel.size())) {
+        if (!inputBuffers[ch]->write(channel.data(), channel.size())) {
           std::cerr << "Input buffer overflow; dropping accumulated audio\n";
           for (auto &buffer : inputBuffers) {
-            buffer.Clear();
+            buffer->clear();
           }
           break;
         }
       }
 
       while (gRunning.load()) {
-        bool ready =
-            outputBuffer->available() >= (blockOutputFrames * options.channels);
+        bool ready = outputBuffer.availableToWrite() >=
+                     (streamOutputFrames * options.channels);
         for (const auto &buffer : inputBuffers) {
-          if (buffer.size() < blockInputFrames) {
+          if (buffer->availableToRead() < streamInputFrames) {
             ready = false;
             break;
           }
@@ -563,29 +530,29 @@ int main(int argc, char **argv) {
         }
 
         for (unsigned int ch = 0; ch < options.channels; ++ch) {
-          if (!inputBuffers[ch].Pop(channelBlocks[ch].data(),
-                                    channelBlocks[ch].size())) {
+          if (!inputBuffers[ch]->read(channelBlocks[ch].data(),
+                                      channelBlocks[ch].size())) {
             gRunning.store(false);
             break;
           }
           std::vector<float> out = channelUpsamplers[ch].ProcessBlock(
               channelBlocks[ch].data(), channelBlocks[ch].size());
-          if (out.size() != blockOutputFrames) {
+          if (out.size() != streamOutputFrames) {
             std::cerr << "Filter output size mismatch\n";
             gRunning.store(false);
             break;
           }
-          for (size_t i = 0; i < blockOutputFrames; ++i) {
+          for (size_t i = 0; i < streamOutputFrames; ++i) {
             interleavedBlock[i * options.channels + ch] = out[i];
           }
         }
         if (!gRunning.load()) {
           break;
         }
-        if (!outputBuffer->Push(interleavedBlock.data(),
+        if (!outputBuffer.write(interleavedBlock.data(),
                                 interleavedBlock.size())) {
           std::cerr << "Output buffer overflow; dropping accumulated audio\n";
-          outputBuffer->Clear();
+          outputBuffer.clear();
           break;
         }
       }
@@ -606,9 +573,9 @@ int main(int argc, char **argv) {
     } else {
       processed.assign(outputFrames * options.channels, 0.0f);
       bool wroteOutput = false;
-      while (outputBuffer->size() >= outputFrames * options.channels &&
+      while (outputBuffer.availableToRead() >= outputFrames * options.channels &&
              gRunning.load()) {
-        if (!outputBuffer->Pop(processed.data(),
+        if (!outputBuffer.read(processed.data(),
                                outputFrames * options.channels)) {
           std::cerr << "Output buffer underrun\n";
           break;
