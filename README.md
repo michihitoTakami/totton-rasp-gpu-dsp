@@ -84,6 +84,7 @@ Enable with:
 
 ### ALSA streaming (Issue #3)
 - Build: `cmake -B build -DENABLE_ALSA=ON` then `cmake --build build -j$(nproc)`
+- Vulkan/VkFFT needs glslang headers/libs (Ubuntu: `glslang-dev`); if missing, CMake disables `USE_VKFFT`.
 - Run (minimal): `./build/alsa_streamer --in hw:0 --out hw:0`
 - Run with filter: `./build/alsa_streamer --in hw:0 --out hw:0 --filter data/coefficients/filter_44k_2x_80000_min_phase.json`
 - Auto-select filter set: `./build/alsa_streamer --in hw:0 --out hw:0 --filter-dir data/coefficients --ratio 2 --phase min`
@@ -139,6 +140,7 @@ build/     : Build artifacts
 1. `uv sync` で Python/C++/Vulkan 関連依存を整理（`uv.lock` を再利用）
 2. 必要に応じて `uv run python -m scripts.filters.generate_minimum_phase --generate-all --taps 80000 --kaiser-beta 25 --stopband-attenuation 140` でフィルタを生成
 3. `cmake -B build -DENABLE_VULKAN=ON`（必要に応じて `-DUSE_VKFFT=ON`）でビルド設定を作成
+   - VkFFT を使う場合は `glslang-dev` が必要。未導入の場合は `USE_VKFFT` が自動的に無効化されます。
 4. `.pre-commit-config.yaml` で `pre-commit run --all-files` を実行
 5. `aqua.yaml` を使って Aqua CLI で lint/format を統一
 
