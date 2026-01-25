@@ -47,6 +47,16 @@ if(ENABLE_VULKAN)
     target_link_libraries(vulkan_upsampler PUBLIC Vulkan::Vulkan)
 
     if(USE_VKFFT)
+        find_path(GLSLANG_C_INTERFACE_INCLUDE glslang_c_interface.h)
+        find_library(GLSLANG_LIBRARY NAMES glslang)
+        find_library(SPIRV_LIBRARY NAMES SPIRV)
+        if(NOT GLSLANG_C_INTERFACE_INCLUDE OR NOT GLSLANG_LIBRARY OR NOT SPIRV_LIBRARY)
+            message(WARNING "glslang/spirv libraries not found; disabling USE_VKFFT")
+            set(USE_VKFFT OFF CACHE BOOL "Use VkFFT backend when Vulkan is enabled" FORCE)
+        endif()
+    endif()
+
+    if(USE_VKFFT)
         include(FetchContent)
         FetchContent_Declare(
             vkfft
@@ -59,6 +69,8 @@ if(ENABLE_VULKAN)
         endif()
         target_compile_definitions(vulkan_upsampler PRIVATE USE_VKFFT=1 VKFFT_BACKEND=0)
         target_include_directories(vulkan_upsampler PRIVATE ${vkfft_SOURCE_DIR})
+        target_include_directories(vulkan_upsampler PRIVATE ${GLSLANG_C_INTERFACE_INCLUDE})
+        target_link_libraries(vulkan_upsampler PRIVATE ${GLSLANG_LIBRARY} ${SPIRV_LIBRARY})
     endif()
 endif()
 
