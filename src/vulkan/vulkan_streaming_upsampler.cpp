@@ -88,8 +88,10 @@ std::string BuildError(const std::string &message, const std::string &detail) {
   return message + ": " + detail;
 }
 
+} // namespace
+
 #if defined(ENABLE_VULKAN) && defined(USE_VKFFT)
-struct VkfftContext {
+struct VulkanStreamingUpsampler::VkfftContext {
   VkInstance instance = VK_NULL_HANDLE;
   VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
   VkDevice device = VK_NULL_HANDLE;
@@ -373,10 +375,8 @@ struct VkfftContext {
   void Unmap() { vkUnmapMemory(device, bufferMemory); }
 };
 #else
-struct VkfftContext {};
+struct VulkanStreamingUpsampler::VkfftContext {};
 #endif
-
-} // namespace
 
 VulkanStreamingUpsampler::VulkanStreamingUpsampler() = default;
 
