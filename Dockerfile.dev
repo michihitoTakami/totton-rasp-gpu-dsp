@@ -19,6 +19,7 @@ RUN apt-get update \
         libasound2-dev \
         libzmq3-dev \
         libvulkan-dev \
+        libglslang-dev \
         jq \
         gdb \
         valgrind \
@@ -49,6 +50,7 @@ RUN apt-get update \
         libasound2 \
         libzmq5 \
         libvulkan1 \
+        libglslang-dev \
         ca-certificates \
         jq \
         vulkan-tools \
