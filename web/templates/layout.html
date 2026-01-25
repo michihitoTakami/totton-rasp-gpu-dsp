@@ -1,3 +1,4 @@
+{% import "components/card_panel.html" as panels %}
 <!doctype html>
 <html lang="en">
   <head>
@@ -15,8 +16,18 @@
   </head>
   <body>
     <div class="background"></div>
-    <main class="page">
-      {% block content %}{% endblock %}
+    <main class="layout">
+      <aside class="sidebar">
+        {% call panels.card_panel("Navigation") %}
+          <nav class="nav-list">
+            <a class="nav-link {% if request.url.path == '/' %}is-active{% endif %}" href="/">EQ Settings</a>
+            <a class="nav-link {% if request.url.path == '/settings' %}is-active{% endif %}" href="/settings">ALSA Settings</a>
+          </nav>
+        {% endcall %}
+      </aside>
+      <section class="page">
+        {% block content %}{% endblock %}
+      </section>
     </main>
   </body>
 </html>
