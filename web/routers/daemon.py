@@ -3,7 +3,7 @@
 from fastapi import APIRouter, HTTPException
 
 from ..models import ApiResponse, PhaseTypeResponse, PhaseTypeUpdateRequest
-from ..services import get_daemon_client
+from ..services import get_daemon_client, restart_dsp_container
 
 router = APIRouter(prefix="/daemon", tags=["daemon"])
 
@@ -67,3 +67,13 @@ async def soft_reset_daemon():
     if not response.success:
         raise HTTPException(status_code=502, detail=response.message)
     return ApiResponse(success=True, message="Soft reset requested")
+
+
+@router.post("/restart", response_model=ApiResponse)
+async def restart_container():
+    """Restart the DSP container to refresh device nodes."""
+    try:
+        restart_dsp_container()
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=str(exc))
+    return ApiResponse(success=True, message="Restart requested")

@@ -3,6 +3,7 @@
 from .config import load_config, save_config, save_config_updates
 from .daemon import check_daemon_running, fetch_zmq_stats, load_stats
 from .daemon_client import get_daemon_client
+from .docker_control import restart_dsp_container
 from .eq import (
     is_safe_profile_name,
     parse_eq_profile_content,
@@ -19,6 +20,7 @@ __all__ = [
     "load_stats",
     "parse_eq_profile_content",
     "read_and_validate_upload",
+    "restart_dsp_container",
     "save_config",
     "save_config_updates",
     "validate_eq_profile_content",

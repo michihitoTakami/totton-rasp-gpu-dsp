@@ -13,6 +13,10 @@ ZEROMQ_IPC_PATH = os.environ.get("TOTTON_ZMQ_ENDPOINT", "ipc:///tmp/totton_zmq.s
 STATS_FILE_PATH = Path(
     os.environ.get("TOTTON_STATS_PATH", "/tmp/gpu_upsampler_stats.json")
 )
+DOCKER_SOCKET_PATH = Path(
+    os.environ.get("TOTTON_DOCKER_SOCKET", "/var/run/docker.sock")
+)
+DSP_CONTAINER_NAME = os.environ.get("TOTTON_DSP_CONTAINER", "totton-dsp")
 
 PHASE_TYPE_MINIMUM = "minimum"
 PHASE_TYPE_LINEAR = "linear"

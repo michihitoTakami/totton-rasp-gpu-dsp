@@ -79,3 +79,20 @@ def test_api_phase_type_set(monkeypatch):
     body = response.json()
     assert body["success"] is True
     assert body["data"]["phase_type"] == "minimum"
+
+
+def test_api_daemon_restart(monkeypatch):
+    called = {"ok": False}
+
+    def _fake_restart():
+        called["ok"] = True
+
+    monkeypatch.setattr("web.routers.daemon.restart_dsp_container", _fake_restart)
+
+    client = TestClient(app)
+    response = client.post("/api/daemon/restart")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["success"] is True
+    assert called["ok"] is True
