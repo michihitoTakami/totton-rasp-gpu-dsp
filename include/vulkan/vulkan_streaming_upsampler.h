@@ -23,8 +23,8 @@ public:
   VulkanStreamingUpsampler(const VulkanStreamingUpsampler &other);
   VulkanStreamingUpsampler &operator=(const VulkanStreamingUpsampler &other);
   VulkanStreamingUpsampler(VulkanStreamingUpsampler &&) noexcept = default;
-  VulkanStreamingUpsampler &operator=(VulkanStreamingUpsampler &&) noexcept =
-      default;
+  VulkanStreamingUpsampler &
+  operator=(VulkanStreamingUpsampler &&) noexcept = default;
   ~VulkanStreamingUpsampler();
 
   bool LoadFilter(const std::string &jsonPath, std::string *errorMessage);

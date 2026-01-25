@@ -350,8 +350,8 @@ struct VulkanStreamingUpsampler::VkfftContext {
       }
       return false;
     }
-    if (vkWaitForFences(device, 1, &fence, VK_TRUE,
-                        100000000000) != VK_SUCCESS) {
+    if (vkWaitForFences(device, 1, &fence, VK_TRUE, 100000000000) !=
+        VK_SUCCESS) {
       if (errorMessage) {
         *errorMessage = "Failed to wait for Vulkan fence";
       }
@@ -385,8 +385,8 @@ VulkanStreamingUpsampler::VulkanStreamingUpsampler(
   *this = other;
 }
 
-VulkanStreamingUpsampler &VulkanStreamingUpsampler::operator=(
-    const VulkanStreamingUpsampler &other) {
+VulkanStreamingUpsampler &
+VulkanStreamingUpsampler::operator=(const VulkanStreamingUpsampler &other) {
   if (this == &other) {
     return *this;
   }
