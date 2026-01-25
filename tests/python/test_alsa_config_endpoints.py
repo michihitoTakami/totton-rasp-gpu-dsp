@@ -38,8 +38,8 @@ def test_api_list_alsa_devices(monkeypatch):
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload["playback"] == ["hw:0"]
-    assert payload["capture"] == ["hw:1"]
+    assert payload["playback"] == [{"value": "hw:0", "label": "hw:0"}]
+    assert payload["capture"] == [{"value": "hw:1", "label": "hw:1"}]
 
 
 def test_api_update_config(monkeypatch):

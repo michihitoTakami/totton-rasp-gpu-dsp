@@ -75,8 +75,8 @@ std::string BuildJsonArray(const std::vector<std::string> &values) {
   return out.str();
 }
 
-std::string BuildJsonDeviceArray(
-    const std::vector<DacCapability::DeviceOption> &values) {
+std::string
+BuildJsonDeviceArray(const std::vector<DacCapability::DeviceOption> &values) {
   std::ostringstream out;
   out << "[";
   for (std::size_t i = 0; i < values.size(); ++i) {

@@ -6,8 +6,8 @@
 #include "io/dac_capability.h"
 
 #include <algorithm>
-#include <cstdlib>
 #include <alsa/asoundlib.h>
+#include <cstdlib>
 
 namespace DacCapability {
 
@@ -25,10 +25,9 @@ std::string GetCardLongName(int card) {
 
 void AppendUnique(std::vector<DeviceOption> &devices, const std::string &value,
                   const std::string &label) {
-  auto exists = std::find_if(devices.begin(), devices.end(),
-                             [&](const DeviceOption &item) {
-                               return item.value == value;
-                             });
+  auto exists = std::find_if(
+      devices.begin(), devices.end(),
+      [&](const DeviceOption &item) { return item.value == value; });
   if (exists == devices.end()) {
     devices.push_back(DeviceOption{value, label});
   }
@@ -127,13 +126,9 @@ Capability scan(const std::string &device) {
   return cap;
 }
 
-std::vector<DeviceOption> listPlaybackDevices() {
-  return BuildDeviceOptions();
-}
+std::vector<DeviceOption> listPlaybackDevices() { return BuildDeviceOptions(); }
 
-std::vector<DeviceOption> listCaptureDevices() {
-  return BuildDeviceOptions();
-}
+std::vector<DeviceOption> listCaptureDevices() { return BuildDeviceOptions(); }
 
 bool isRateSupported(const Capability &cap, int sampleRate) {
   if (!cap.isValid) {
