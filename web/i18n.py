@@ -131,6 +131,7 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "btn_save_apply": "Save & Apply",
         "btn_reload_devices": "Reload Devices",
         "btn_refresh_config": "Refresh Config",
+        "notice_reload_devices_restart": "Reload Devices restarts the DSP container to pick up newly connected USB devices.",
         "ratio_1x_bypass": "1x (Bypass)",
         "ratio_2x": "2x",
         "ratio_4x": "4x",
@@ -141,8 +142,12 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "error_failed_load_devices": "Failed to load devices",
         "error_failed_load_config": "Failed to load config",
         "error_failed_save_config": "Failed to save config",
+        "error_failed_restart_dsp": "Failed to restart DSP",
+        "error_daemon_not_ready": "DSP daemon did not come back online.",
         "message_saved_restart_required": "Saved. Restart required to apply ALSA changes.",
         "message_saved_applied": "Saved and applied.",
+        "message_restart_in_progress": "Restarting DSP to reload devices...",
+        "message_devices_reloaded": "Devices reloaded.",
     }
 }
 

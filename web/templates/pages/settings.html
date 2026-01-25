@@ -37,8 +37,11 @@
   {% call panels.card_panel(t('section_apply_settings')) %}
     <div class="profile-actions">
       {{ buttons.btn_primary(t('btn_save_apply'), click='saveConfig()', disabled='actionPending') }}
-      {{ buttons.btn_primary(t('btn_reload_devices'), click='fetchDevices()', disabled='actionPending', extra_class='btn-secondary') }}
+      {{ buttons.btn_primary(t('btn_reload_devices'), click='reloadDevices()', disabled='actionPending', extra_class='btn-secondary') }}
       {{ buttons.btn_primary(t('btn_refresh_config'), click='fetchConfig()', disabled='actionPending', extra_class='btn-secondary') }}
+    </div>
+    <div class="notice" style="margin-top: 12px;">
+      {{ t('notice_reload_devices_restart') }}
     </div>
     <div class="notice success" x-show="actionMessage" x-text="actionMessage" style="margin-top: 16px;"></div>
     <div class="notice error" x-show="actionError" x-text="actionError" style="margin-top: 16px;"></div>
@@ -96,6 +99,46 @@ function alsaSettingsApp() {
       } catch (err) {
         this.actionError = err.message;
       }
+    },
+    async reloadDevices() {
+      this.actionPending = true;
+      this.actionMessage = null;
+      this.actionError = null;
+      try {
+        const response = await fetch('/api/daemon/restart', { method: 'POST' });
+        if (!response.ok) {
+          const err = await response.json();
+          throw new Error(err.detail || t('error_failed_restart_dsp'));
+        }
+        this.actionMessage = t('message_restart_in_progress');
+        const ready = await this.waitForDaemon();
+        if (!ready) {
+          throw new Error(t('error_daemon_not_ready'));
+        }
+        await this.fetchDevices();
+        this.actionMessage = t('message_devices_reloaded');
+      } catch (err) {
+        this.actionError = err.message;
+      } finally {
+        this.actionPending = false;
+      }
+    },
+    async waitForDaemon(attempts = 20, delayMs = 1000) {
+      for (let i = 0; i < attempts; i += 1) {
+        try {
+          const response = await fetch('/api/status');
+          if (response.ok) {
+            const data = await response.json();
+            if (data.daemon_running) {
+              return true;
+            }
+          }
+        } catch (err) {
+          // Ignore transient errors during restart.
+        }
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+      }
+      return false;
     },
     async fetchConfig() {
       try {

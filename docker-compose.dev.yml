@@ -63,10 +63,12 @@ services:
       TOTTON_ZMQ_PUB_ENDPOINT: tcp://totton-dsp-dev:5556
       TOTTON_STATS_PATH: /tmp/gpu_upsampler_stats.json
       TOTTON_WEB_PORT: 8080
+      TOTTON_DSP_CONTAINER: totton-dsp-dev
     volumes:
       - totton-dsp-dev-data:/var/lib/totton-dsp
       # Mount web directory for hot reload during development
       - ./web:/opt/totton-dsp/web:ro
+      - /var/run/docker.sock:/var/run/docker.sock
     ports:
       - "8080:8080"
     restart: unless-stopped
