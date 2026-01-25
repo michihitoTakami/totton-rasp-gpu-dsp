@@ -6,39 +6,39 @@
 {% block content %}
 <div x-data="alsaSettingsApp()" x-init="init()">
   <header class="page-header">
-    <h1 class="page-title">ALSA Device Settings</h1>
-    <p class="page-subtitle">Select capture/playback devices and persist settings.</p>
+    <h1 class="page-title">{{ t('alsa_page_title') }}</h1>
+    <p class="page-subtitle">{{ t('alsa_page_subtitle') }}</p>
   </header>
 
   <div class="grid grid-2">
-    {% call panels.card_panel("Device Selection") %}
-      {{ forms.select_input('alsaInput', 'Input Device', 'config.alsa.input_device', 'devices.capture') }}
-      {{ forms.select_input('alsaOutput', 'Output Device', 'config.alsa.output_device', 'devices.playback') }}
+    {% call panels.card_panel(t('section_device_selection')) %}
+      {{ forms.select_input('alsaInput', t('label_input_device'), 'config.alsa.input_device', 'devices.capture') }}
+      {{ forms.select_input('alsaOutput', t('label_output_device'), 'config.alsa.output_device', 'devices.playback') }}
       <div class="notice" x-show="!devices.capture.length || !devices.playback.length">
-        Device list is empty or unavailable. Ensure the DSP daemon is running.
+        {{ t('notice_devices_empty') }}
       </div>
     {% endcall %}
 
-    {% call panels.card_panel("Stream Parameters") %}
-      {{ forms.text_input('alsaRate', 'Sample Rate (Hz)', 'config.alsa.sample_rate', type='number', placeholder='Auto') }}
-      {{ forms.text_input('alsaChannels', 'Channels', 'config.alsa.channels', type='number', placeholder='2') }}
-      {{ forms.select_input('alsaFormat', 'Format', 'config.alsa.format', 'formatOptions') }}
-      {{ forms.text_input('alsaPeriod', 'Period Frames', 'config.alsa.period_frames', type='number', placeholder='Auto') }}
-      {{ forms.text_input('alsaBuffer', 'Buffer Frames', 'config.alsa.buffer_frames', type='number', placeholder='Auto') }}
+    {% call panels.card_panel(t('section_stream_parameters')) %}
+      {{ forms.text_input('alsaRate', t('label_sample_rate'), 'config.alsa.sample_rate', type='number', placeholder=t('placeholder_auto')) }}
+      {{ forms.text_input('alsaChannels', t('label_channels'), 'config.alsa.channels', type='number', placeholder=t('placeholder_channels_default')) }}
+      {{ forms.select_input('alsaFormat', t('label_format'), 'config.alsa.format', 'formatOptions') }}
+      {{ forms.text_input('alsaPeriod', t('label_period_frames'), 'config.alsa.period_frames', type='number', placeholder=t('placeholder_auto')) }}
+      {{ forms.text_input('alsaBuffer', t('label_buffer_frames'), 'config.alsa.buffer_frames', type='number', placeholder=t('placeholder_auto')) }}
     {% endcall %}
 
-    {% call panels.card_panel("Filter Settings") %}
-      {{ forms.select_input('filterRatio', 'Upsample Ratio', 'config.filter.ratio', 'ratioOptions') }}
-      {{ forms.select_input('filterPhase', 'Phase Type', 'config.filter.phase_type', 'phaseOptions') }}
-      {{ forms.text_input('filterDir', 'Filter Directory', 'config.filter.directory', placeholder='/opt/totton-dsp/data/coefficients') }}
+    {% call panels.card_panel(t('section_filter_settings')) %}
+      {{ forms.select_input('filterRatio', t('label_upsample_ratio'), 'config.filter.ratio', 'ratioOptions') }}
+      {{ forms.select_input('filterPhase', t('label_phase_type'), 'config.filter.phase_type', 'phaseOptions') }}
+      {{ forms.text_input('filterDir', t('label_filter_directory'), 'config.filter.directory', placeholder=t('placeholder_filter_directory')) }}
     {% endcall %}
   </div>
 
-  {% call panels.card_panel("Apply Settings") %}
+  {% call panels.card_panel(t('section_apply_settings')) %}
     <div class="profile-actions">
-      {{ buttons.btn_primary('Save & Apply', click='saveConfig()', disabled='actionPending') }}
-      {{ buttons.btn_primary('Reload Devices', click='fetchDevices()', disabled='actionPending', extra_class='btn-secondary') }}
-      {{ buttons.btn_primary('Refresh Config', click='fetchConfig()', disabled='actionPending', extra_class='btn-secondary') }}
+      {{ buttons.btn_primary(t('btn_save_apply'), click='saveConfig()', disabled='actionPending') }}
+      {{ buttons.btn_primary(t('btn_reload_devices'), click='fetchDevices()', disabled='actionPending', extra_class='btn-secondary') }}
+      {{ buttons.btn_primary(t('btn_refresh_config'), click='fetchConfig()', disabled='actionPending', extra_class='btn-secondary') }}
     </div>
     <div class="notice success" x-show="actionMessage" x-text="actionMessage" style="margin-top: 16px;"></div>
     <div class="notice error" x-show="actionError" x-text="actionError" style="margin-top: 16px;"></div>
@@ -67,15 +67,15 @@ function alsaSettingsApp() {
       }
     },
     ratioOptions: [
-      { label: '1x (Bypass)', value: 1 },
-      { label: '2x', value: 2 },
-      { label: '4x', value: 4 },
-      { label: '8x', value: 8 },
-      { label: '16x', value: 16 }
+      { label: t('ratio_1x_bypass'), value: 1 },
+      { label: t('ratio_2x'), value: 2 },
+      { label: t('ratio_4x'), value: 4 },
+      { label: t('ratio_8x'), value: 8 },
+      { label: t('ratio_16x'), value: 16 }
     ],
     phaseOptions: [
-      { label: 'Minimum', value: 'minimum' },
-      { label: 'Linear', value: 'linear' }
+      { label: t('phase_minimum'), value: 'minimum' },
+      { label: t('phase_linear'), value: 'linear' }
     ],
     actionPending: false,
     actionMessage: null,
@@ -88,7 +88,7 @@ function alsaSettingsApp() {
       try {
         const response = await fetch('/api/alsa/devices');
         if (!response.ok) {
-          throw new Error('Failed to load devices');
+          throw new Error(t('error_failed_load_devices'));
         }
         const data = await response.json();
         this.devices.playback = data.playback || [];
@@ -101,7 +101,7 @@ function alsaSettingsApp() {
       try {
         const response = await fetch('/api/config');
         if (!response.ok) {
-          throw new Error('Failed to load config');
+          throw new Error(t('error_failed_load_config'));
         }
         const data = await response.json();
         const settings = data.settings || {};
@@ -149,13 +149,13 @@ function alsaSettingsApp() {
         });
         if (!response.ok) {
           const err = await response.json();
-          throw new Error(err.detail || 'Failed to save config');
+          throw new Error(err.detail || t('error_failed_save_config'));
         }
         const data = await response.json();
         if (data.restart_required) {
-          this.actionMessage = 'Saved. Restart required to apply ALSA changes.';
+          this.actionMessage = t('message_saved_restart_required');
         } else {
-          this.actionMessage = 'Saved and applied.';
+          this.actionMessage = t('message_saved_applied');
         }
       } catch (err) {
         this.actionError = err.message;

@@ -7,56 +7,56 @@
 {% block content %}
 <div x-data="eqApp()" x-init="init()">
   <header class="page-header">
-    <h1 class="page-title">Totton Audio Control</h1>
-    <p class="page-subtitle">EQ control, phase switching, and live DSP status.</p>
+    <h1 class="page-title">{{ t('eq_page_title') }}</h1>
+    <p class="page-subtitle">{{ t('eq_page_subtitle') }}</p>
   </header>
 
   <div class="grid grid-2">
-    {% call panels.card_panel("System Status") %}
+    {% call panels.card_panel(t('section_system_status')) %}
       <div class="info-row">
         <div>
-          <div class="muted">State</div>
+          <div class="muted">{{ t('label_state') }}</div>
           <div class="mono" x-text="status.state"></div>
         </div>
-        <span class="badge" :class="status.daemon_running ? 'badge-on' : 'badge-off'" x-text="status.daemon_running ? 'RUNNING' : 'STOPPED'"></span>
+        <span class="badge" :class="status.daemon_running ? 'badge-on' : 'badge-off'" x-text="status.daemon_running ? t('status_running') : t('status_stopped')"></span>
       </div>
       <div class="info-row">
-        <div class="muted">Input Rate</div>
+        <div class="muted">{{ t('label_input_rate') }}</div>
         <div class="mono" x-text="formatRate(status.input_rate)"></div>
       </div>
       <div class="info-row">
-        <div class="muted">Output Rate</div>
+        <div class="muted">{{ t('label_output_rate') }}</div>
         <div class="mono" x-text="formatRate(status.output_rate)"></div>
       </div>
       <div class="info-row">
-        <div class="muted">XRUN Total</div>
+        <div class="muted">{{ t('label_xrun_total') }}</div>
         <div class="mono" x-text="status.xrun_total"></div>
       </div>
       <div class="info-row" x-show="status.uptime_ms !== null">
-        <div class="muted">Uptime</div>
+        <div class="muted">{{ t('label_uptime') }}</div>
         <div class="mono" x-text="formatUptime(status.uptime_ms)"></div>
       </div>
       <div class="info-row" x-show="status.phase_type">
-        <div class="muted">Phase</div>
+        <div class="muted">{{ t('label_phase') }}</div>
         <div class="mono" x-text="status.phase_type"></div>
       </div>
     {% endcall %}
 
-    {% call panels.card_panel("DSP Controls") %}
+    {% call panels.card_panel(t('section_dsp_controls')) %}
       <div class="info-row">
         <div>
-          <div class="muted">Phase</div>
+          <div class="muted">{{ t('label_phase') }}</div>
           <div class="mono" x-text="phaseType"></div>
         </div>
         <div class="profile-actions">
-          {{ buttons.btn_primary('Minimum', click="setPhase('minimum')", disabled="actionPending || phaseType === 'minimum'", attrs=":class=\"phaseType === 'minimum' ? '' : 'btn-secondary'\"") }}
-          {{ buttons.btn_primary('Linear', click="setPhase('linear')", disabled="actionPending || phaseType === 'linear'", attrs=":class=\"phaseType === 'linear' ? '' : 'btn-secondary'\"") }}
+          {{ buttons.btn_primary(t('btn_minimum'), click="setPhase('minimum')", disabled="actionPending || phaseType === 'minimum'", attrs=":class=\"phaseType === 'minimum' ? '' : 'btn-secondary'\"") }}
+          {{ buttons.btn_primary(t('btn_linear'), click="setPhase('linear')", disabled="actionPending || phaseType === 'linear'", attrs=":class=\"phaseType === 'linear' ? '' : 'btn-secondary'\"") }}
         </div>
       </div>
       <div class="profile-actions" style="margin-top: 12px;">
-        {{ buttons.btn_primary('Reload', click='requestReload()', disabled='actionPending') }}
-        {{ buttons.btn_primary('Soft Reset', click='requestSoftReset()', disabled='actionPending', extra_class='btn-secondary') }}
-        {{ buttons.btn_primary('Refresh Status', click='fetchStatus()', disabled='actionPending', extra_class='btn-secondary') }}
+        {{ buttons.btn_primary(t('btn_reload'), click='requestReload()', disabled='actionPending') }}
+        {{ buttons.btn_primary(t('btn_soft_reset'), click='requestSoftReset()', disabled='actionPending', extra_class='btn-secondary') }}
+        {{ buttons.btn_primary(t('btn_refresh_status'), click='fetchStatus()', disabled='actionPending', extra_class='btn-secondary') }}
       </div>
       <div class="notice success" x-show="actionMessage" x-text="actionMessage" style="margin-top: 16px;"></div>
       <div class="notice error" x-show="actionError" x-text="actionError" style="margin-top: 16px;"></div>
@@ -64,40 +64,40 @@
   </div>
 
   <div class="grid grid-2">
-    {% call panels.card_panel("Active Profile") %}
+    {% call panels.card_panel(t('section_active_profile')) %}
       <div class="info-row">
         <div>
-          <div class="mono" x-text="activeEq.name || 'None'"></div>
-          <div class="muted" x-text="activeEq.active ? 'Profile is active' : 'No EQ profile active'"></div>
+          <div class="mono" x-text="activeEq.name || t('label_none')"></div>
+          <div class="muted" x-text="activeEq.active ? t('text_profile_active') : t('text_profile_inactive')"></div>
         </div>
-        <span class="badge" :class="activeEq.active ? 'badge-on' : 'badge-off'" x-text="activeEq.active ? 'ON' : 'OFF'"></span>
+        <span class="badge" :class="activeEq.active ? 'badge-on' : 'badge-off'" x-text="activeEq.active ? t('badge_on') : t('badge_off')"></span>
       </div>
       <div class="info-row" x-show="activeEq.active && activeEq.source_type">
-        <div class="muted">Source</div>
+        <div class="muted">{{ t('label_source') }}</div>
         <div class="mono" x-text="activeEq.source_type"></div>
       </div>
       <div class="info-row" x-show="activeEq.active && activeEq.has_modern_target">
-        <div class="muted">Modern Target</div>
-        <div class="badge badge-warning">KB5000_7</div>
+        <div class="muted">{{ t('label_modern_target') }}</div>
+        <div class="badge badge-warning">{{ t('label_kb5000') }}</div>
       </div>
       <div class="notice warning" x-show="activeEq.error" x-text="activeEq.error"></div>
       <div class="profile-actions" style="margin-top: 16px;">
-        {{ buttons.btn_primary('Deactivate EQ', click='deactivateEq()', disabled='!activeEq.active', extra_class='btn-secondary') }}
+        {{ buttons.btn_primary(t('btn_deactivate_eq'), click='deactivateEq()', disabled='!activeEq.active', extra_class='btn-secondary') }}
       </div>
     {% endcall %}
 
-    {% call panels.card_panel("Upload & Validate") %}
+    {% call panels.card_panel(t('section_upload_validate')) %}
       <div class="form-group">
-        <label for="eqFile">EQ Profile (.txt)</label>
+        <label for="eqFile">{{ t('label_eq_profile_file') }}</label>
         <input id="eqFile" type="file" accept=".txt" @change="handleFile($event)">
       </div>
       <div class="profile-actions">
-        {{ buttons.btn_primary('Validate', click='validateUpload()', disabled='!upload.file') }}
-        {{ buttons.btn_primary('Import', click='importProfile()', disabled='!upload.file') }}
+        {{ buttons.btn_primary(t('btn_validate'), click='validateUpload()', disabled='!upload.file') }}
+        {{ buttons.btn_primary(t('btn_import'), click='importProfile()', disabled='!upload.file') }}
       </div>
 
       <div class="notice" x-show="validation && validation.valid">
-        Validation passed: <span class="mono" x-text="validation.filter_count"></span> filters.
+        {{ t('text_validation_passed') }} <span class="mono" x-text="validation.filter_count"></span> {{ t('text_filters_suffix') }}
       </div>
       <div class="notice error" x-show="validation && validation.errors.length">
         <template x-for="err in validation.errors" :key="err">
@@ -112,74 +112,74 @@
 
       <div x-show="validation && validation.preamp_db !== null" style="margin-top: 16px;">
         <div class="info-row">
-          <div class="muted">Preamp (from file)</div>
+          <div class="muted">{{ t('label_preamp_from_file') }}</div>
           <div class="mono" x-text="validation.preamp_db + ' dB'"></div>
         </div>
-        {{ sliders.slider_input(min=-30, max=0, step=0.1, model='recommendedPreamp', disabled='true', label='Recommended Preamp (Headroom)', id='recommendedPreamp') }}
+        {{ sliders.slider_input(min=-30, max=0, step=0.1, model='recommendedPreamp', disabled='true', label=t('label_recommended_preamp'), id='recommendedPreamp') }}
       </div>
     {% endcall %}
   </div>
 
-  {% call panels.card_panel("OPRA Headphone Search") %}
+  {% call panels.card_panel(t('section_opra_search')) %}
     {% include 'components/opra_search.html' %}
     <div class="profile-actions" style="margin-top: 12px;">
-      {{ buttons.btn_primary('Apply OPRA EQ', icon='✓', click='applyOPRA()', disabled='!opra.selected || opraActionPending') }}
+      {{ buttons.btn_primary(t('btn_apply_opra'), icon='✓', click='applyOPRA()', disabled='!opra.selected || opraActionPending') }}
     </div>
     <div class="notice success" x-show="opraMessage" x-text="opraMessage" style="margin-top: 12px;"></div>
     <div class="notice error" x-show="opraError" x-text="opraError" style="margin-top: 12px;"></div>
     <div class="opra-license" style="margin-top: 16px;">
-      EQ data: <a href="https://github.com/opra-project/OPRA" target="_blank" rel="noopener noreferrer">OPRA Project</a> (CC BY-SA 4.0)
+      {{ t('text_eq_data_prefix') }} <a href="https://github.com/opra-project/OPRA" target="_blank" rel="noopener noreferrer">{{ t('text_opra_project') }}</a> {{ t('text_opra_license_suffix') }}
     </div>
   {% endcall %}
 
-  {% call panels.card_panel("Saved Profiles") %}
+  {% call panels.card_panel(t('section_saved_profiles')) %}
     <div class="profile-list" x-show="profiles.length">
       <template x-for="profile in profiles" :key="profile.name">
         <div class="profile-item">
           <div>
             <div class="mono" x-text="profile.name"></div>
-            <div class="muted" x-text="profile.filter_count + ' filters'"></div>
+            <div class="muted" x-text="profile.filter_count + ' ' + t('text_filters_count')"></div>
           </div>
           <div class="profile-actions">
-            {{ buttons.btn_primary('Activate', click="activateProfile(profile.name)", disabled="activeEq.name === profile.name") }}
+            {{ buttons.btn_primary(t('btn_activate'), click="activateProfile(profile.name)", disabled="activeEq.name === profile.name") }}
           </div>
         </div>
       </template>
     </div>
-    <div class="notice" x-show="!profiles.length">No saved profiles yet.</div>
+    <div class="notice" x-show="!profiles.length">{{ t('text_no_saved_profiles') }}</div>
   {% endcall %}
 
-  {% call panels.card_panel("OPRA Sync") %}
+  {% call panels.card_panel(t('section_opra_sync')) %}
     <div class="info-row">
       <div>
-        <div class="muted">Status</div>
+        <div class="muted">{{ t('label_status') }}</div>
         <div class="mono" x-text="formatOpraStatus(opraSync.status?.status)"></div>
       </div>
       <span class="badge" :class="opraSyncBadgeClass()" x-text="opraSyncBadgeText()"></span>
     </div>
     <div class="info-row" style="margin-top: 12px;">
-      <div class="muted">Current Commit</div>
-      <div class="mono" x-text="opraSync.status?.current_commit || '—'"></div>
+      <div class="muted">{{ t('label_current_commit') }}</div>
+      <div class="mono" x-text="opraSync.status?.current_commit || t('text_dash')"></div>
     </div>
     <div class="info-row">
-      <div class="muted">Previous Commit</div>
-      <div class="mono" x-text="opraSync.status?.previous_commit || '—'"></div>
+      <div class="muted">{{ t('label_previous_commit') }}</div>
+      <div class="mono" x-text="opraSync.status?.previous_commit || t('text_dash')"></div>
     </div>
     <div class="info-row">
-      <div class="muted">Downloaded At</div>
+      <div class="muted">{{ t('label_downloaded_at') }}</div>
       <div class="mono" x-text="formatIso(opraSync.status?.current_metadata?.downloaded_at)"></div>
     </div>
     <div class="info-row" x-show="opraSync.status?.last_error">
-      <div class="muted">Last Error</div>
+      <div class="muted">{{ t('label_last_error') }}</div>
       <div class="mono" x-text="opraSync.status?.last_error"></div>
     </div>
 
-    {{ forms.text_input('opraSyncTarget', 'Source / Target', 'opraSync.targetRef', placeholder='latest or commit SHA', disabled='opraSync.loading || opraSync.status?.status === \"running\"') }}
+    {{ forms.text_input('opraSyncTarget', t('label_source_target'), 'opraSync.targetRef', placeholder=t('placeholder_latest_or_sha'), disabled='opraSync.loading || opraSync.status?.status === \"running\"') }}
 
     <div class="profile-actions">
-      {{ buttons.btn_primary('Check Updates', click='checkOpraAvailable()', disabled='opraSync.loading') }}
-      {{ buttons.btn_primary('Update', click='startOpraUpdate()', disabled='opraSync.loading || opraSync.status?.status === \"running\"') }}
-      {{ buttons.btn_primary('Rollback', click='startOpraRollback()', disabled='opraSync.loading || opraSync.status?.status === \"running\" || !opraSync.status?.previous_commit', extra_class='btn-secondary') }}
+      {{ buttons.btn_primary(t('btn_check_updates'), click='checkOpraAvailable()', disabled='opraSync.loading') }}
+      {{ buttons.btn_primary(t('btn_update'), click='startOpraUpdate()', disabled='opraSync.loading || opraSync.status?.status === \"running\"') }}
+      {{ buttons.btn_primary(t('btn_rollback'), click='startOpraRollback()', disabled='opraSync.loading || opraSync.status?.status === \"running\" || !opraSync.status?.previous_commit', extra_class='btn-secondary') }}
     </div>
 
     <div class="notice success" x-show="opraSync.message" x-text="opraSync.message" style="margin-top: 16px;"></div>
@@ -289,7 +289,7 @@ function eqApp() {
     },
     formatIso(isoString) {
       if (!isoString) {
-        return '—';
+        return t('text_dash');
       }
       try {
         return new Date(isoString).toLocaleString();
@@ -299,10 +299,10 @@ function eqApp() {
     },
     formatOpraStatus(status) {
       const normalized = String(status || 'idle').toLowerCase();
-      if (normalized === 'running') return 'Running';
-      if (normalized === 'ready') return 'Ready';
-      if (normalized === 'failed') return 'Failed';
-      return 'Idle';
+      if (normalized === 'running') return t('opra_status_running');
+      if (normalized === 'ready') return t('opra_status_ready');
+      if (normalized === 'failed') return t('opra_status_failed');
+      return t('opra_status_idle');
     },
     opraSyncBadgeClass() {
       const normalized = String(this.opraSync.status?.status || 'idle').toLowerCase();
@@ -312,10 +312,10 @@ function eqApp() {
     },
     opraSyncBadgeText() {
       const normalized = String(this.opraSync.status?.status || 'idle').toLowerCase();
-      if (normalized === 'running') return 'RUNNING';
-      if (normalized === 'ready') return 'READY';
-      if (normalized === 'failed') return 'FAILED';
-      return 'IDLE';
+      if (normalized === 'running') return t('opra_badge_running');
+      if (normalized === 'ready') return t('opra_badge_ready');
+      if (normalized === 'failed') return t('opra_badge_failed');
+      return t('opra_badge_idle');
     },
     resolveOpraSyncParams() {
       const ref = String(this.opraSync.targetRef || '').trim();
@@ -354,12 +354,12 @@ function eqApp() {
         const response = await fetch(`/api/opra/sync/available?source=${encodeURIComponent(source)}`);
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
-          throw new Error(data.detail || data.message || 'Failed to check updates');
+          throw new Error(data.detail || data.message || t('error_failed_check_updates'));
         }
         this.opraSync.available = data;
-        this.opraSync.message = `Latest available: ${data.latest || 'unknown'}`;
+        this.opraSync.message = t('text_latest_available', { value: data.latest || t('label_unknown') });
       } catch (err) {
-        this.opraSync.error = err.message || 'Failed to check updates';
+        this.opraSync.error = err.message || t('error_failed_check_updates');
       } finally {
         this.opraSync.loading = false;
       }
@@ -369,7 +369,7 @@ function eqApp() {
         return;
       }
       const { source, target } = this.resolveOpraSyncParams();
-      if (!confirm(`Start OPRA update (${target})?`)) {
+      if (!confirm(t('confirm_start_opra_update', { target: target }))) {
         return;
       }
       this.opraSync.loading = true;
@@ -383,12 +383,12 @@ function eqApp() {
         });
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
-          throw new Error(data.detail || data.message || 'Failed to start update');
+          throw new Error(data.detail || data.message || t('error_failed_start_update'));
         }
-        this.opraSync.message = 'OPRA update started';
+        this.opraSync.message = t('message_opra_update_started');
         await this.fetchOpraSyncStatus();
       } catch (err) {
-        this.opraSync.error = err.message || 'Failed to start update';
+        this.opraSync.error = err.message || t('error_failed_start_update');
       } finally {
         this.opraSync.loading = false;
       }
@@ -397,7 +397,7 @@ function eqApp() {
       if (this.opraSync.loading) {
         return;
       }
-      if (!confirm('Rollback OPRA database to previous version?')) {
+      if (!confirm(t('confirm_opra_rollback'))) {
         return;
       }
       this.opraSync.loading = true;
@@ -407,12 +407,12 @@ function eqApp() {
         const response = await fetch('/api/opra/sync/rollback', { method: 'POST' });
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
-          throw new Error(data.detail || data.message || 'Failed to start rollback');
+          throw new Error(data.detail || data.message || t('error_failed_start_rollback'));
         }
-        this.opraSync.message = 'OPRA rollback started';
+        this.opraSync.message = t('message_opra_rollback_started');
         await this.fetchOpraSyncStatus();
       } catch (err) {
-        this.opraSync.error = err.message || 'Failed to start rollback';
+        this.opraSync.error = err.message || t('error_failed_start_rollback');
       } finally {
         this.opraSync.loading = false;
       }
@@ -427,7 +427,7 @@ function eqApp() {
       try {
         const response = await fetch(`/opra/search?q=${encodeURIComponent(this.opra.searchQuery)}`);
         if (!response.ok) {
-          throw new Error('Search failed');
+          throw new Error(t('error_search_failed'));
         }
         const data = await response.json();
         this.opra.results = data.results || [];
@@ -456,23 +456,23 @@ function eqApp() {
       try {
         const eqId = this.opra.selectedEqId || this.opra.eqProfiles[0]?.id;
         if (!eqId) {
-          throw new Error('No EQ profile selected');
+          throw new Error(t('error_no_eq_profile_selected'));
         }
 
         const endpoint = `/opra/apply/${encodeURIComponent(eqId)}?apply_correction=${this.opra.useModernTarget}`;
         const response = await fetch(endpoint, { method: 'POST' });
         if (!response.ok) {
           const err = await response.json();
-          throw new Error(err.detail || 'Failed to apply OPRA EQ');
+          throw new Error(err.detail || t('error_failed_apply_opra'));
         }
 
         const data = await response.json();
-        this.opraMessage = data.message || 'OPRA EQ applied';
+        this.opraMessage = data.message || t('message_opra_eq_applied');
         await this.fetchActive();
         await this.fetchProfiles();
       } catch (error) {
         console.error('Failed to apply OPRA EQ:', error);
-        this.opraError = error.message || 'Failed to apply OPRA EQ';
+        this.opraError = error.message || t('error_failed_apply_opra');
       } finally {
         this.opraActionPending = false;
       }
@@ -503,7 +503,7 @@ function eqApp() {
       const response = await fetch('/api/eq/import', { method: 'POST', body: formData });
       if (!response.ok) {
         const err = await response.json();
-        this.validation = { valid: false, errors: [err.detail || 'Upload failed'], warnings: [] };
+        this.validation = { valid: false, errors: [err.detail || t('error_upload_failed')], warnings: [] };
         return;
       }
       const data = await response.json();
@@ -527,13 +527,13 @@ function eqApp() {
     },
     formatRate(rate) {
       if (!rate || rate <= 0) {
-        return '—';
+        return t('text_dash');
       }
-      return `${rate} Hz`;
+      return `${rate} ${t('unit_hz')}`;
     },
     formatUptime(ms) {
       if (ms === null || ms === undefined) {
-        return '—';
+        return t('text_dash');
       }
       const seconds = Math.floor(ms / 1000);
       const minutes = Math.floor(seconds / 60);
@@ -541,12 +541,12 @@ function eqApp() {
       const remMinutes = minutes % 60;
       const remSeconds = seconds % 60;
       if (hours > 0) {
-        return `${hours}h ${remMinutes}m`;
+        return `${hours}${t('unit_hour_short')} ${remMinutes}${t('unit_minute_short')}`;
       }
       if (minutes > 0) {
-        return `${minutes}m ${remSeconds}s`;
+        return `${minutes}${t('unit_minute_short')} ${remSeconds}${t('unit_second_short')}`;
       }
-      return `${remSeconds}s`;
+      return `${remSeconds}${t('unit_second_short')}`;
     },
     async setPhase(phase) {
       this.actionPending = true;
@@ -560,11 +560,11 @@ function eqApp() {
         });
         if (!response.ok) {
           const err = await response.json();
-          this.actionError = err.detail || 'Phase update failed';
+          this.actionError = err.detail || t('error_phase_update_failed');
           return;
         }
         const data = await response.json();
-        this.actionMessage = data.message || 'Phase updated';
+        this.actionMessage = data.message || t('message_phase_updated');
         this.phaseType = phase;
         await this.fetchStatus();
       } finally {
@@ -572,10 +572,10 @@ function eqApp() {
       }
     },
     async requestReload() {
-      await this.runDaemonAction('/api/daemon/reload', 'Reload requested');
+      await this.runDaemonAction('/api/daemon/reload', t('message_reload_requested'));
     },
     async requestSoftReset() {
-      await this.runDaemonAction('/api/daemon/soft-reset', 'Soft reset requested');
+      await this.runDaemonAction('/api/daemon/soft-reset', t('message_soft_reset_requested'));
     },
     async runDaemonAction(url, successMessage) {
       this.actionPending = true;
@@ -585,7 +585,7 @@ function eqApp() {
         const response = await fetch(url, { method: 'POST' });
         if (!response.ok) {
           const err = await response.json();
-          this.actionError = err.detail || 'Command failed';
+          this.actionError = err.detail || t('error_command_failed');
           return;
         }
         this.actionMessage = successMessage;
