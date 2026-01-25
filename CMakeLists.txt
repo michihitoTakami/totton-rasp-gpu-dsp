@@ -47,6 +47,48 @@ if(ENABLE_VULKAN)
     target_link_libraries(vulkan_upsampler PUBLIC Vulkan::Vulkan)
 
     if(USE_VKFFT)
+        set(GLSLANG_LIBS "")
+        find_package(glslang CONFIG QUIET)
+        if(glslang_FOUND)
+            set(GLSLANG_LIBS
+                glslang::glslang
+                glslang::SPIRV
+                glslang::glslang-default-resource-limits
+            )
+        else()
+            find_path(GLSLANG_C_INTERFACE_INCLUDE glslang_c_interface.h)
+            find_library(GLSLANG_LIBRARY NAMES glslang)
+            find_library(SPIRV_LIBRARY NAMES SPIRV)
+            find_library(OGLCOMPILER_LIBRARY NAMES OGLCompiler)
+            find_library(OSDEPENDENT_LIBRARY NAMES OSDependent)
+            find_library(HLSL_LIBRARY NAMES HLSL)
+            find_library(GLSLANG_DEFAULT_RESOURCE_LIMITS_LIBRARY
+                NAMES glslang-default-resource-limits
+            )
+            if(GLSLANG_C_INTERFACE_INCLUDE AND GLSLANG_LIBRARY AND SPIRV_LIBRARY)
+                set(GLSLANG_LIBS ${GLSLANG_LIBRARY} ${SPIRV_LIBRARY})
+                if(OGLCOMPILER_LIBRARY)
+                    list(APPEND GLSLANG_LIBS ${OGLCOMPILER_LIBRARY})
+                endif()
+                if(OSDEPENDENT_LIBRARY)
+                    list(APPEND GLSLANG_LIBS ${OSDEPENDENT_LIBRARY})
+                endif()
+                if(HLSL_LIBRARY)
+                    list(APPEND GLSLANG_LIBS ${HLSL_LIBRARY})
+                endif()
+                if(GLSLANG_DEFAULT_RESOURCE_LIMITS_LIBRARY)
+                    list(APPEND GLSLANG_LIBS ${GLSLANG_DEFAULT_RESOURCE_LIMITS_LIBRARY})
+                endif()
+            endif()
+        endif()
+
+        if(NOT GLSLANG_LIBS)
+            message(WARNING "glslang/spirv libraries not found; disabling USE_VKFFT")
+            set(USE_VKFFT OFF CACHE BOOL "Use VkFFT backend when Vulkan is enabled" FORCE)
+        endif()
+    endif()
+
+    if(USE_VKFFT)
         include(FetchContent)
         FetchContent_Declare(
             vkfft
@@ -59,6 +101,12 @@ if(ENABLE_VULKAN)
         endif()
         target_compile_definitions(vulkan_upsampler PRIVATE USE_VKFFT=1 VKFFT_BACKEND=0)
         target_include_directories(vulkan_upsampler PRIVATE ${vkfft_SOURCE_DIR})
+        if(glslang_FOUND)
+            target_link_libraries(vulkan_upsampler PRIVATE ${GLSLANG_LIBS})
+        else()
+            target_include_directories(vulkan_upsampler PRIVATE ${GLSLANG_C_INTERFACE_INCLUDE})
+            target_link_libraries(vulkan_upsampler PRIVATE ${GLSLANG_LIBS})
+        endif()
     endif()
 endif()
 

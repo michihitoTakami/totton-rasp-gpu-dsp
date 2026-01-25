@@ -3,6 +3,7 @@
 #include <complex>
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -19,6 +20,12 @@ struct FilterConfig {
 class VulkanStreamingUpsampler {
 public:
   VulkanStreamingUpsampler();
+  VulkanStreamingUpsampler(const VulkanStreamingUpsampler &other);
+  VulkanStreamingUpsampler &operator=(const VulkanStreamingUpsampler &other);
+  VulkanStreamingUpsampler(VulkanStreamingUpsampler &&) noexcept = default;
+  VulkanStreamingUpsampler &
+  operator=(VulkanStreamingUpsampler &&) noexcept = default;
+  ~VulkanStreamingUpsampler();
 
   bool LoadFilter(const std::string &jsonPath, std::string *errorMessage);
   std::vector<float> ProcessBlock(const float *input, std::size_t count);
@@ -32,6 +39,8 @@ private:
   bool LoadCoefficients(const FilterConfig &config, std::string *errorMessage);
   bool PrepareSpectrum(std::string *errorMessage);
 
+  struct VkfftContext;
+  std::unique_ptr<VkfftContext> vkfft_;
   FilterConfig config_{};
   std::vector<float> coefficients_{};
   std::vector<float> overlap_{};
