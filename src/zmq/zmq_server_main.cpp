@@ -75,6 +75,21 @@ std::string BuildJsonArray(const std::vector<std::string> &values) {
   return out.str();
 }
 
+std::string BuildJsonDeviceArray(
+    const std::vector<DacCapability::DeviceOption> &values) {
+  std::ostringstream out;
+  out << "[";
+  for (std::size_t i = 0; i < values.size(); ++i) {
+    if (i > 0) {
+      out << ",";
+    }
+    out << "{\"value\":\"" << EscapeJson(values[i].value) << "\",\"label\":\""
+        << EscapeJson(values[i].label) << "\"}";
+  }
+  out << "]";
+  return out.str();
+}
+
 void PrintUsage(const char *argv0) {
   std::cout << "Usage: " << argv0
             << " [--endpoint <endpoint>] [--pub-endpoint <endpoint>]\n";
@@ -190,8 +205,8 @@ int main(int argc, char **argv) {
   auto listDevicesHandler = [&](const totton::zmq_server::ZmqRequest &) {
     const auto playback = DacCapability::listPlaybackDevices();
     const auto capture = DacCapability::listCaptureDevices();
-    std::string data = "{\"playback\":" + BuildJsonArray(playback) +
-                       ",\"capture\":" + BuildJsonArray(capture) + "}";
+    std::string data = "{\"playback\":" + BuildJsonDeviceArray(playback) +
+                       ",\"capture\":" + BuildJsonDeviceArray(capture) + "}";
     return totton::zmq_server::ZmqResponse{
         totton::zmq_server::ZmqCommandServer::BuildOk(data)};
   };

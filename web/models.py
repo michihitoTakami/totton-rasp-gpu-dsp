@@ -36,11 +36,18 @@ class Settings(BaseModel):
     filter: Optional[FilterSettings] = None
 
 
+class AlsaDeviceOption(BaseModel):
+    """ALSA device option with display label."""
+
+    value: str
+    label: str
+
+
 class AlsaDeviceListResponse(BaseModel):
     """Available ALSA devices."""
 
-    playback: list[str]
-    capture: list[str]
+    playback: list[AlsaDeviceOption]
+    capture: list[AlsaDeviceOption]
 
 
 class ConfigResponse(BaseModel):

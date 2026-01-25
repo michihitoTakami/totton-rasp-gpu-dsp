@@ -4,7 +4,7 @@ import logging
 
 from fastapi import APIRouter, HTTPException
 
-from ..models import AlsaDeviceListResponse
+from ..models import AlsaDeviceListResponse, AlsaDeviceOption
 from ..services import get_daemon_client
 
 logger = logging.getLogger(__name__)
@@ -30,7 +30,25 @@ async def list_alsa_devices() -> AlsaDeviceListResponse:
     if not isinstance(playback, list) or not isinstance(capture, list):
         raise HTTPException(status_code=502, detail="Invalid ALSA device payload")
 
+    def normalize(items: list[object]) -> list[AlsaDeviceOption]:
+        options: list[AlsaDeviceOption] = []
+        for item in items:
+            if isinstance(item, dict):
+                value = item.get("value")
+                label = item.get("label")
+                if value is None and label is not None:
+                    value = label
+                if label is None and value is not None:
+                    label = value
+                if value is None or label is None:
+                    continue
+                options.append(AlsaDeviceOption(value=str(value), label=str(label)))
+            else:
+                text = str(item)
+                options.append(AlsaDeviceOption(value=text, label=text))
+        return options
+
     return AlsaDeviceListResponse(
-        playback=[str(item) for item in playback],
-        capture=[str(item) for item in capture],
+        playback=normalize(playback),
+        capture=normalize(capture),
     )
