@@ -21,13 +21,18 @@ struct Capability {
   std::string errorMessage;        // Error message if scan failed
 };
 
+struct DeviceOption {
+  std::string value;
+  std::string label;
+};
+
 // Scan DAC capabilities via ALSA
 Capability scan(const std::string &device);
 
 // Get list of available ALSA playback devices
-std::vector<std::string> listPlaybackDevices();
+std::vector<DeviceOption> listPlaybackDevices();
 // Get list of available ALSA capture devices
-std::vector<std::string> listCaptureDevices();
+std::vector<DeviceOption> listCaptureDevices();
 
 // Check if a specific sample rate is supported by the DAC
 bool isRateSupported(const Capability &cap, int sampleRate);

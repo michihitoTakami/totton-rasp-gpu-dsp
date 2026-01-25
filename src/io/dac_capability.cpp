@@ -7,8 +7,51 @@
 
 #include <algorithm>
 #include <alsa/asoundlib.h>
+#include <cstdlib>
 
 namespace DacCapability {
+
+namespace {
+
+std::string GetCardLongName(int card) {
+  char *name = nullptr;
+  if (snd_card_get_longname(card, &name) == 0 && name) {
+    std::string result = name;
+    std::free(name);
+    return result;
+  }
+  return {};
+}
+
+void AppendUnique(std::vector<DeviceOption> &devices, const std::string &value,
+                  const std::string &label) {
+  auto exists = std::find_if(
+      devices.begin(), devices.end(),
+      [&](const DeviceOption &item) { return item.value == value; });
+  if (exists == devices.end()) {
+    devices.push_back(DeviceOption{value, label});
+  }
+}
+
+std::vector<DeviceOption> BuildDeviceOptions() {
+  std::vector<DeviceOption> devices;
+  AppendUnique(devices, "default", "default (system default)");
+
+  int card = -1;
+  while (snd_card_next(&card) >= 0 && card >= 0) {
+    const std::string cardName = GetCardLongName(card);
+    const std::string cardLabel =
+        cardName.empty() ? ("Card " + std::to_string(card)) : cardName;
+    const std::string hwValue = "hw:" + std::to_string(card);
+    const std::string plughwValue = "plughw:" + std::to_string(card);
+    AppendUnique(devices, hwValue, cardLabel + " (" + hwValue + ")");
+    AppendUnique(devices, plughwValue, cardLabel + " (" + plughwValue + ")");
+  }
+
+  return devices;
+}
+
+} // namespace
 
 Capability scan(const std::string &device) {
   Capability cap;
@@ -83,37 +126,9 @@ Capability scan(const std::string &device) {
   return cap;
 }
 
-std::vector<std::string> listPlaybackDevices() {
-  std::vector<std::string> devices;
-  devices.push_back("default");
-  devices.push_back("hw:0");
-  devices.push_back("plughw:0");
+std::vector<DeviceOption> listPlaybackDevices() { return BuildDeviceOptions(); }
 
-  int card = -1;
-  while (snd_card_next(&card) >= 0 && card >= 0) {
-    std::string hwDevice = "hw:" + std::to_string(card);
-    if (std::find(devices.begin(), devices.end(), hwDevice) == devices.end()) {
-      devices.push_back(hwDevice);
-    }
-  }
-  return devices;
-}
-
-std::vector<std::string> listCaptureDevices() {
-  std::vector<std::string> devices;
-  devices.push_back("default");
-  devices.push_back("hw:0");
-  devices.push_back("plughw:0");
-
-  int card = -1;
-  while (snd_card_next(&card) >= 0 && card >= 0) {
-    std::string hwDevice = "hw:" + std::to_string(card);
-    if (std::find(devices.begin(), devices.end(), hwDevice) == devices.end()) {
-      devices.push_back(hwDevice);
-    }
-  }
-  return devices;
-}
+std::vector<DeviceOption> listCaptureDevices() { return BuildDeviceOptions(); }
 
 bool isRateSupported(const Capability &cap, int sampleRate) {
   if (!cap.isValid) {
