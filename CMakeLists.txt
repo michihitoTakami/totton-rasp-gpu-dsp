@@ -43,8 +43,8 @@ endif()
 
 if(ENABLE_VULKAN)
     find_package(Vulkan REQUIRED)
-    target_compile_definitions(vulkan_upsampler PRIVATE ENABLE_VULKAN=1)
-    target_link_libraries(vulkan_upsampler PRIVATE Vulkan::Vulkan)
+    target_compile_definitions(vulkan_upsampler PUBLIC ENABLE_VULKAN=1)
+    target_link_libraries(vulkan_upsampler PUBLIC Vulkan::Vulkan)
 
     if(USE_VKFFT)
         include(FetchContent)
