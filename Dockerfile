@@ -8,6 +8,7 @@ RUN apt-get update \
         libzmq5 \
         libvulkan1 \
         glslang-dev \
+        mesa-vulkan-drivers \
         jq \
         ca-certificates \
     && rm -rf /var/lib/apt/lists/*
