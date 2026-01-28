@@ -30,6 +30,7 @@ jobs:
               ca-certificates \
               cmake \
               git \
+              glslang-dev \
               libasound2-dev \
               libvulkan-dev \
               libzmq3-dev \
