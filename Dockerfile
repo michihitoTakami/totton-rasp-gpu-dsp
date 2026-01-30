@@ -9,6 +9,7 @@ RUN apt-get update \
         libasound2t64 \
         libzmq5 \
         libvulkan1 \
+        glslang-dev \
         glslang-tools \
         mesa-vulkan-drivers \
         jq \
