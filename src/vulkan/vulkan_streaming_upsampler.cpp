@@ -4,6 +4,7 @@
 #include <cctype>
 #include <filesystem>
 #include <fstream>
+#include <iostream>
 #include <memory>
 #include <sstream>
 #include <string>
@@ -403,7 +404,8 @@ VulkanStreamingUpsampler::operator=(const VulkanStreamingUpsampler &other) {
     if (context->Initialize(config_.fftSize, &error)) {
       vkfft_ = std::move(context);
     } else {
-      initialized_ = false;
+      std::cerr << "VkFFT initialization failed; falling back to CPU: " << error
+                << "\n";
     }
   }
 #endif
@@ -674,9 +676,11 @@ bool VulkanStreamingUpsampler::PrepareSpectrum(std::string *errorMessage) {
 
 #if defined(ENABLE_VULKAN) && defined(USE_VKFFT)
   vkfft_ = std::make_unique<VkfftContext>();
-  if (!vkfft_->Initialize(config_.fftSize, errorMessage)) {
+  std::string vkfftError;
+  if (!vkfft_->Initialize(config_.fftSize, &vkfftError)) {
+    std::cerr << "VkFFT initialization failed; falling back to CPU: "
+              << vkfftError << "\n";
     vkfft_.reset();
-    return false;
   }
 #endif
   return true;
