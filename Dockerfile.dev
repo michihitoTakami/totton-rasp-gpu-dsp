@@ -18,7 +18,7 @@ RUN apt-get update \
         python3-pip \
         libasound2-dev \
         libzmq3-dev \
-        libcppzmq-dev \
+        cppzmq-dev \
         libvulkan-dev \
         glslang-dev \
         glslang-tools \
