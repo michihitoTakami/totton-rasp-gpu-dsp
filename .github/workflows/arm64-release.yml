@@ -22,7 +22,8 @@ jobs:
         uses: uraimo/run-on-arch-action@v2
         with:
           arch: aarch64
-          distro: ubuntu24.04
+          # run-on-arch-action v2 supports ubuntu20.04 for aarch64
+          distro: ubuntu20.04
           install: |
             apt-get update
             apt-get install -y --no-install-recommends \
