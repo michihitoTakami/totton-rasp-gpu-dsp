@@ -101,7 +101,9 @@ if(ENABLE_VULKAN)
             FetchContent_Populate(vkfft)
         endif()
         target_compile_definitions(vulkan_upsampler PRIVATE USE_VKFFT=1 VKFFT_BACKEND=0)
-        target_include_directories(vulkan_upsampler PRIVATE ${vkfft_SOURCE_DIR})
+        target_include_directories(vulkan_upsampler PRIVATE
+            ${vkfft_SOURCE_DIR}
+            ${vkfft_SOURCE_DIR}/vkFFT)
         # Add glslang include path for VkFFT's glslang_c_interface.h
         target_include_directories(vulkan_upsampler PRIVATE /usr/include/glslang/Include)
         if(glslang_FOUND)
