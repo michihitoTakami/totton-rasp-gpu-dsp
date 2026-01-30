@@ -51,7 +51,7 @@ RUN apt-get update \
         python3-setuptools \
         python3-wheel \
         libasound2t64 \
-        libzmq5t64 \
+        libzmq5 \
         libvulkan1 \
         glslang-tools \
         ca-certificates \
