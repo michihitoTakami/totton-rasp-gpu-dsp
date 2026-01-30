@@ -443,9 +443,14 @@ int main(int argc, char **argv) {
 
   const auto outputFrames =
       static_cast<size_t>(capture->periodFrames) * upsampleFactor;
+  const snd_pcm_uframes_t outputBufferFrames =
+      (options.bufferFrames > 0)
+          ? static_cast<snd_pcm_uframes_t>(options.bufferFrames) *
+                upsampleFactor
+          : 0;
   auto playback = totton::alsa::OpenPcm(
       options.outputDevice, SND_PCM_STREAM_PLAYBACK, format, options.channels,
-      outputRate, outputFrames, options.bufferFrames);
+      outputRate, outputFrames, outputBufferFrames);
   if (!playback) {
     return 1;
   }
