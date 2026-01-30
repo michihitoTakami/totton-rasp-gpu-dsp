@@ -33,6 +33,7 @@ jobs:
               glslang-dev \
               glslang-tools \
               libasound2-dev \
+              libglslang-dev \
               libvulkan-dev \
               libzmq3-dev \
               ninja-build \
