@@ -1,8 +1,8 @@
 # X86 Development Environment Dockerfile
 # For local testing with ALSA loopback and Vulkan GPU
-# Target: Ubuntu 22.04 with RTX 2070 Super (SM 7.5)
+# Target: Ubuntu 24.04 with RTX 2070 Super (SM 7.5)
 
-FROM ubuntu:22.04 AS build
+FROM ubuntu:24.04 AS build
 
 # Prevent interactive prompts
 ENV DEBIAN_FRONTEND=noninteractive
@@ -20,6 +20,7 @@ RUN apt-get update \
         libzmq3-dev \
         libvulkan-dev \
         glslang-dev \
+        glslang-tools \
         jq \
         gdb \
         valgrind \
@@ -39,7 +40,7 @@ RUN cmake -B build \
     -DCMAKE_CUDA_ARCHITECTURES=75 \
     && cmake --build build -j"$(nproc)"
 
-FROM ubuntu:22.04
+FROM ubuntu:24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -50,7 +51,7 @@ RUN apt-get update \
         libasound2 \
         libzmq5 \
         libvulkan1 \
-        glslang-dev \
+        glslang-tools \
         ca-certificates \
         jq \
         vulkan-tools \
