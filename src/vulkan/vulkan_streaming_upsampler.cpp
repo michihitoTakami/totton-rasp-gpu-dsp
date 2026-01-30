@@ -404,8 +404,8 @@ VulkanStreamingUpsampler::operator=(const VulkanStreamingUpsampler &other) {
     if (context->Initialize(config_.fftSize, &error)) {
       vkfft_ = std::move(context);
     } else {
-      std::cerr << "VkFFT initialization failed; falling back to CPU: "
-                << error << "\n";
+      std::cerr << "VkFFT initialization failed; falling back to CPU: " << error
+                << "\n";
     }
   }
 #endif
