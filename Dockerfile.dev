@@ -1,8 +1,8 @@
 # X86 Development Environment Dockerfile
 # For local testing with ALSA loopback and Vulkan GPU
-# Target: Ubuntu 22.04 with RTX 2070 Super (SM 7.5)
+# Target: Ubuntu 24.04 with RTX 2070 Super (SM 7.5)
 
-FROM ubuntu:22.04 AS build
+FROM ubuntu:24.04 AS build
 
 # Prevent interactive prompts
 ENV DEBIAN_FRONTEND=noninteractive
@@ -18,8 +18,10 @@ RUN apt-get update \
         python3-pip \
         libasound2-dev \
         libzmq3-dev \
+        cppzmq-dev \
         libvulkan-dev \
         glslang-dev \
+        glslang-tools \
         jq \
         gdb \
         valgrind \
@@ -39,7 +41,7 @@ RUN cmake -B build \
     -DCMAKE_CUDA_ARCHITECTURES=75 \
     && cmake --build build -j"$(nproc)"
 
-FROM ubuntu:22.04
+FROM ubuntu:24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -47,10 +49,13 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         python3 \
         python3-pip \
-        libasound2 \
+        python3-setuptools \
+        python3-wheel \
+        libasound2t64 \
         libzmq5 \
         libvulkan1 \
         glslang-dev \
+        glslang-tools \
         ca-certificates \
         jq \
         vulkan-tools \
@@ -73,7 +78,7 @@ COPY --from=build /opt/totton-dsp/data /opt/totton-dsp/data
 COPY --from=build /opt/totton-dsp/scripts /opt/totton-dsp/scripts
 COPY docker/entrypoint.sh /usr/local/bin/totton-entrypoint.sh
 
-RUN pip3 install --no-cache-dir \
+RUN pip3 install --no-cache-dir --break-system-packages \
         fastapi \
         uvicorn \
         jinja2 \
