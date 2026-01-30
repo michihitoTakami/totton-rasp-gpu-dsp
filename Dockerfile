@@ -28,7 +28,7 @@ COPY data /opt/totton-dsp/data
 COPY scripts /opt/totton-dsp/scripts
 COPY docker/entrypoint.sh /usr/local/bin/totton-entrypoint.sh
 
-RUN pip3 install --no-cache-dir \
+RUN pip3 install --no-cache-dir --break-system-packages \
         fastapi \
         uvicorn \
         jinja2 \
