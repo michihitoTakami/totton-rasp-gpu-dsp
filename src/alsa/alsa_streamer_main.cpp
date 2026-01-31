@@ -424,8 +424,7 @@ int main(int argc, char **argv) {
 
   snd_pcm_uframes_t captureBufferFrames =
       static_cast<snd_pcm_uframes_t>(options.bufferFrames);
-  if (captureBufferFrames == 0 && blockInputFrames > 0 &&
-      upsampleFactor > 1) {
+  if (captureBufferFrames == 0 && blockInputFrames > 0 && upsampleFactor > 1) {
     const std::size_t multiplier =
         std::min<std::size_t>(std::max<std::size_t>(4, upsampleFactor * 2), 16);
     captureBufferFrames =
@@ -547,8 +546,8 @@ int main(int argc, char **argv) {
           ++dropCount;
           const auto now = std::chrono::steady_clock::now();
           if (now - lastDropLog > std::chrono::seconds(1)) {
-            std::cerr << "Output buffer overflow; dropping audio ("
-                      << dropCount << ")\n";
+            std::cerr << "Output buffer overflow; dropping audio (" << dropCount
+                      << ")\n";
             lastDropLog = now;
           }
         }
