@@ -96,16 +96,16 @@ namespace {
 
 std::string DeviceTypeLabel(VkPhysicalDeviceType type) {
   switch (type) {
-    case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:
-      return "discrete";
-    case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
-      return "integrated";
-    case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU:
-      return "virtual";
-    case VK_PHYSICAL_DEVICE_TYPE_CPU:
-      return "cpu";
-    default:
-      return "other";
+  case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:
+    return "discrete";
+  case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
+    return "integrated";
+  case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU:
+    return "virtual";
+  case VK_PHYSICAL_DEVICE_TYPE_CPU:
+    return "cpu";
+  default:
+    return "other";
   }
 }
 
@@ -129,18 +129,18 @@ bool FindComputeQueueFamily(VkPhysicalDevice device, uint32_t *index) {
 
 int DeviceTypeRank(VkPhysicalDeviceType type) {
   switch (type) {
-    case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:
-      return 0;
-    case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
-      return 1;
-    case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU:
-      return 2;
-    case VK_PHYSICAL_DEVICE_TYPE_OTHER:
-      return 3;
-    case VK_PHYSICAL_DEVICE_TYPE_CPU:
-      return 4;
-    default:
-      return 5;
+  case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:
+    return 0;
+  case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
+    return 1;
+  case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU:
+    return 2;
+  case VK_PHYSICAL_DEVICE_TYPE_OTHER:
+    return 3;
+  case VK_PHYSICAL_DEVICE_TYPE_CPU:
+    return 4;
+  default:
+    return 5;
   }
 }
 
