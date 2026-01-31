@@ -92,6 +92,60 @@ std::string BuildError(const std::string &message, const std::string &detail) {
 } // namespace
 
 #if defined(ENABLE_VULKAN) && defined(USE_VKFFT)
+namespace {
+
+std::string DeviceTypeLabel(VkPhysicalDeviceType type) {
+  switch (type) {
+    case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:
+      return "discrete";
+    case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
+      return "integrated";
+    case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU:
+      return "virtual";
+    case VK_PHYSICAL_DEVICE_TYPE_CPU:
+      return "cpu";
+    default:
+      return "other";
+  }
+}
+
+bool FindComputeQueueFamily(VkPhysicalDevice device, uint32_t *index) {
+  uint32_t queueFamilyCount = 0;
+  vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
+  if (queueFamilyCount == 0) {
+    return false;
+  }
+  std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+  vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount,
+                                           queueFamilies.data());
+  for (uint32_t i = 0; i < queueFamilyCount; ++i) {
+    if (queueFamilies[i].queueFlags & VK_QUEUE_COMPUTE_BIT) {
+      *index = i;
+      return true;
+    }
+  }
+  return false;
+}
+
+int DeviceTypeRank(VkPhysicalDeviceType type) {
+  switch (type) {
+    case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:
+      return 0;
+    case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
+      return 1;
+    case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU:
+      return 2;
+    case VK_PHYSICAL_DEVICE_TYPE_OTHER:
+      return 3;
+    case VK_PHYSICAL_DEVICE_TYPE_CPU:
+      return 4;
+    default:
+      return 5;
+  }
+}
+
+} // namespace
+
 struct VulkanStreamingUpsampler::VkfftContext {
   VkInstance instance = VK_NULL_HANDLE;
   VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
@@ -141,24 +195,36 @@ struct VulkanStreamingUpsampler::VkfftContext {
     }
     std::vector<VkPhysicalDevice> devices(deviceCount, VK_NULL_HANDLE);
     vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
-    physicalDevice = devices.front();
-
-    uint32_t queueFamilyCount = 0;
-    vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount,
-                                             nullptr);
-    std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-    vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount,
-                                             queueFamilies.data());
-    bool foundQueue = false;
-    for (uint32_t i = 0; i < queueFamilyCount; ++i) {
-      if (queueFamilies[i].queueFlags & VK_QUEUE_COMPUTE_BIT) {
-        queueFamilyIndex = i;
-        foundQueue = true;
-        break;
+    bool foundDevice = false;
+    VkPhysicalDeviceProperties selectedProps{};
+    int selectedRank = 100;
+    for (const auto &candidate : devices) {
+      VkPhysicalDeviceProperties props{};
+      vkGetPhysicalDeviceProperties(candidate, &props);
+      uint32_t candidateQueueFamily = 0;
+      if (!FindComputeQueueFamily(candidate, &candidateQueueFamily)) {
+        continue;
+      }
+      const int rank = DeviceTypeRank(props.deviceType);
+      std::cerr << "Vulkan device found: " << props.deviceName << " ("
+                << DeviceTypeLabel(props.deviceType) << ")\n";
+      if (!foundDevice || rank < selectedRank) {
+        physicalDevice = candidate;
+        queueFamilyIndex = candidateQueueFamily;
+        selectedProps = props;
+        selectedRank = rank;
+        foundDevice = true;
       }
     }
-    if (!foundQueue) {
+    if (!foundDevice) {
       return fail("No Vulkan compute queue available");
+    }
+
+    std::cerr << "Vulkan device selected: " << selectedProps.deviceName << " ("
+              << DeviceTypeLabel(selectedProps.deviceType) << ")\n";
+    if (selectedProps.deviceType == VK_PHYSICAL_DEVICE_TYPE_CPU) {
+      std::cerr << "Warning: Vulkan CPU device selected; performance may be "
+                   "limited.\n";
     }
 
     const float queuePriority = 1.0f;
