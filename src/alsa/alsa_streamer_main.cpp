@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <chrono>
 #include <csignal>
 #include <filesystem>
 #include <fstream>
@@ -11,6 +12,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include "vulkan/vulkan_streaming_upsampler.h"
@@ -58,8 +60,8 @@ void PrintUsage(const char *argv0) {
          "omitted)\n"
       << "  --channels <n>          Channel count (default: 2)\n"
       << "  --format <s16|s24|s32>  PCM format (default: s32)\n"
-      << "  --period <frames>       ALSA period frames (default: 1024; "
-         "clamped when filter is active)\n"
+      << "  --period <frames>       ALSA period frames (default: filter block "
+         "size; 1024 if no filter)\n"
       << "  --buffer <frames>       ALSA buffer frames (default: period*4)\n"
       << "  --help                  Show this help\n";
 }
@@ -405,16 +407,11 @@ int main(int argc, char **argv) {
   if (fileMode && blockInputFrames > 0) {
     periodFrames = static_cast<unsigned int>(blockInputFrames);
   } else if (periodFrames == 0) {
-    periodFrames = 1024;
     if (blockInputFrames > 0) {
-      periodFrames = static_cast<unsigned int>(
-          std::min<std::size_t>(periodFrames, blockInputFrames));
+      periodFrames = static_cast<unsigned int>(blockInputFrames);
+    } else {
+      periodFrames = 1024;
     }
-  } else if (!fileMode && blockInputFrames > 0 &&
-             periodFrames > blockInputFrames) {
-    std::cerr << "ALSA period is larger than filter input block; clamping to "
-              << blockInputFrames << " frames\n";
-    periodFrames = static_cast<unsigned int>(blockInputFrames);
   }
 
   if (fileMode) {
@@ -425,9 +422,21 @@ int main(int argc, char **argv) {
     return 0;
   }
 
+  snd_pcm_uframes_t captureBufferFrames =
+      static_cast<snd_pcm_uframes_t>(options.bufferFrames);
+  if (captureBufferFrames == 0 && blockInputFrames > 0 &&
+      upsampleFactor > 1) {
+    const std::size_t multiplier =
+        std::min<std::size_t>(std::max<std::size_t>(4, upsampleFactor * 2), 16);
+    captureBufferFrames =
+        static_cast<snd_pcm_uframes_t>(periodFrames * multiplier);
+    std::cerr << "ALSA capture buffer auto-scaled: period " << periodFrames
+              << " frames, buffer " << captureBufferFrames << " frames\n";
+  }
+
   auto capture = totton::alsa::OpenCaptureAutoRate(
       options.inputDevice, format, options.channels, options.requestedRate,
-      periodFrames, options.bufferFrames);
+      periodFrames, captureBufferFrames);
   if (!capture) {
     return 1;
   }
@@ -463,8 +472,7 @@ int main(int argc, char **argv) {
   std::vector<uint8_t> outBuffer;
   std::vector<std::unique_ptr<AudioRingBuffer>> inputBuffers;
   AudioRingBuffer outputBuffer;
-  std::vector<std::vector<float>> channelBlocks;
-  std::vector<float> interleavedBlock;
+  std::thread processingThread;
 
   std::cerr << "ALSA streaming started: input " << capture->rate << " Hz, "
             << "output " << outputRate << " Hz, "
@@ -487,9 +495,65 @@ int main(int argc, char **argv) {
     }
     outputBuffer.init(outputCapacityFrames * options.channels);
 
-    channelBlocks.assign(options.channels,
-                         std::vector<float>(streamInputFrames, 0.0f));
-    interleavedBlock.assign(streamOutputFrames * options.channels, 0.0f);
+    processingThread = std::thread([&] {
+      std::vector<std::vector<float>> channelBlocks(
+          options.channels, std::vector<float>(streamInputFrames, 0.0f));
+      std::vector<float> interleavedBlock(streamOutputFrames * options.channels,
+                                          0.0f);
+      std::size_t dropCount = 0;
+      auto lastDropLog = std::chrono::steady_clock::now();
+
+      while (gRunning.load()) {
+        bool ready = outputBuffer.availableToWrite() >=
+                     (streamOutputFrames * options.channels);
+        for (const auto &buffer : inputBuffers) {
+          if (buffer->availableToRead() < streamInputFrames) {
+            ready = false;
+            break;
+          }
+        }
+        if (!ready) {
+          std::this_thread::sleep_for(std::chrono::milliseconds(1));
+          continue;
+        }
+
+        bool blockReady = true;
+        for (unsigned int ch = 0; ch < options.channels; ++ch) {
+          if (!inputBuffers[ch]->read(channelBlocks[ch].data(),
+                                      channelBlocks[ch].size())) {
+            blockReady = false;
+            break;
+          }
+          std::vector<float> out = channelUpsamplers[ch].ProcessBlock(
+              channelBlocks[ch].data(), channelBlocks[ch].size());
+          if (out.size() != streamOutputFrames) {
+            std::cerr << "Filter output size mismatch\n";
+            gRunning.store(false);
+            blockReady = false;
+            break;
+          }
+          for (size_t i = 0; i < streamOutputFrames; ++i) {
+            interleavedBlock[i * options.channels + ch] = out[i];
+          }
+        }
+        if (!gRunning.load()) {
+          break;
+        }
+        if (!blockReady) {
+          continue;
+        }
+        if (!outputBuffer.write(interleavedBlock.data(),
+                                interleavedBlock.size())) {
+          ++dropCount;
+          const auto now = std::chrono::steady_clock::now();
+          if (now - lastDropLog > std::chrono::seconds(1)) {
+            std::cerr << "Output buffer overflow; dropping audio ("
+                      << dropCount << ")\n";
+            lastDropLog = now;
+          }
+        }
+      }
+    });
   }
 
   while (gRunning.load()) {
@@ -513,52 +577,7 @@ int main(int argc, char **argv) {
           channel[i] = floatBuffer[i * options.channels + ch];
         }
         if (!inputBuffers[ch]->write(channel.data(), channel.size())) {
-          std::cerr << "Input buffer overflow; dropping accumulated audio\n";
-          for (auto &buffer : inputBuffers) {
-            buffer->clear();
-          }
-          break;
-        }
-      }
-
-      while (gRunning.load()) {
-        bool ready = outputBuffer.availableToWrite() >=
-                     (streamOutputFrames * options.channels);
-        for (const auto &buffer : inputBuffers) {
-          if (buffer->availableToRead() < streamInputFrames) {
-            ready = false;
-            break;
-          }
-        }
-        if (!ready) {
-          break;
-        }
-
-        for (unsigned int ch = 0; ch < options.channels; ++ch) {
-          if (!inputBuffers[ch]->read(channelBlocks[ch].data(),
-                                      channelBlocks[ch].size())) {
-            gRunning.store(false);
-            break;
-          }
-          std::vector<float> out = channelUpsamplers[ch].ProcessBlock(
-              channelBlocks[ch].data(), channelBlocks[ch].size());
-          if (out.size() != streamOutputFrames) {
-            std::cerr << "Filter output size mismatch\n";
-            gRunning.store(false);
-            break;
-          }
-          for (size_t i = 0; i < streamOutputFrames; ++i) {
-            interleavedBlock[i * options.channels + ch] = out[i];
-          }
-        }
-        if (!gRunning.load()) {
-          break;
-        }
-        if (!outputBuffer.write(interleavedBlock.data(),
-                                interleavedBlock.size())) {
-          std::cerr << "Output buffer overflow; dropping accumulated audio\n";
-          outputBuffer.clear();
-          break;
+          std::cerr << "Input buffer overflow; dropping audio\n";
         }
       }
     } else {
@@ -608,6 +627,10 @@ int main(int argc, char **argv) {
         }
       }
     }
+  }
+
+  if (processingThread.joinable()) {
+    processingThread.join();
   }
 
   if (capture->handle) {
