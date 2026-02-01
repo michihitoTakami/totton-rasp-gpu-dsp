@@ -158,6 +158,7 @@ struct VulkanStreamingUpsampler::VkfftContext {
     VkFFTConfiguration config = VKFFT_ZERO_INIT;
     VkFFTLaunchParams launchParams = VKFFT_ZERO_INIT;
     bool initialized = false;
+    bool inFlight = false;
   };
 
   static constexpr int kSlotCount = 2;
@@ -388,6 +389,7 @@ struct VulkanStreamingUpsampler::VkfftContext {
       slot.launchParams = VKFFT_ZERO_INIT;
       slot.config = VKFFT_ZERO_INIT;
       slot.app = VKFFT_ZERO_INIT;
+      slot.inFlight = false;
     }
     if (commandPool != VK_NULL_HANDLE) {
       vkDestroyCommandPool(device, commandPool, nullptr);
@@ -418,6 +420,9 @@ struct VulkanStreamingUpsampler::VkfftContext {
       return false;
     }
     Slot &slot = slots[slotIndex];
+    if (!slot.inFlight) {
+      return true;
+    }
     if (vkWaitForFences(device, 1, &slot.fence, VK_TRUE, 100000000000) !=
         VK_SUCCESS) {
       if (errorMessage) {
@@ -425,12 +430,7 @@ struct VulkanStreamingUpsampler::VkfftContext {
       }
       return false;
     }
-    if (vkResetFences(device, 1, &slot.fence) != VK_SUCCESS) {
-      if (errorMessage) {
-        *errorMessage = "Failed to reset Vulkan fence";
-      }
-      return false;
-    }
+    slot.inFlight = false;
     return true;
   }
 
@@ -443,6 +443,11 @@ struct VulkanStreamingUpsampler::VkfftContext {
     }
 
     Slot &slot = slots[slotIndex];
+    if (slot.inFlight) {
+      if (!Wait(slotIndex, errorMessage)) {
+        return false;
+      }
+    }
     vkResetCommandBuffer(slot.commandBuffer, 0);
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -474,12 +479,19 @@ struct VulkanStreamingUpsampler::VkfftContext {
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &slot.commandBuffer;
+    if (vkResetFences(device, 1, &slot.fence) != VK_SUCCESS) {
+      if (errorMessage) {
+        *errorMessage = "Failed to reset Vulkan fence";
+      }
+      return false;
+    }
     if (vkQueueSubmit(queue, 1, &submitInfo, slot.fence) != VK_SUCCESS) {
       if (errorMessage) {
         *errorMessage = "Failed to submit Vulkan queue";
       }
       return false;
     }
+    slot.inFlight = true;
     return true;
   }
 
