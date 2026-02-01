@@ -1,6 +1,7 @@
 #include "vulkan/vulkan_streaming_upsampler.h"
 
 #include <algorithm>
+#include <array>
 #include <cctype>
 #include <filesystem>
 #include <fstream>
@@ -147,20 +148,29 @@ int DeviceTypeRank(VkPhysicalDeviceType type) {
 } // namespace
 
 struct VulkanStreamingUpsampler::VkfftContext {
+  struct Slot {
+    VkCommandBuffer commandBuffer = VK_NULL_HANDLE;
+    VkFence fence = VK_NULL_HANDLE;
+    VkBuffer buffer = VK_NULL_HANDLE;
+    VkDeviceMemory bufferMemory = VK_NULL_HANDLE;
+    uint64_t bufferSize = 0;
+    VkFFTApplication app = VKFFT_ZERO_INIT;
+    VkFFTConfiguration config = VKFFT_ZERO_INIT;
+    VkFFTLaunchParams launchParams = VKFFT_ZERO_INIT;
+    bool initialized = false;
+    bool inFlight = false;
+  };
+
+  static constexpr int kSlotCount = 2;
+
   VkInstance instance = VK_NULL_HANDLE;
   VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
   VkDevice device = VK_NULL_HANDLE;
   VkQueue queue = VK_NULL_HANDLE;
   uint32_t queueFamilyIndex = 0;
   VkCommandPool commandPool = VK_NULL_HANDLE;
-  VkCommandBuffer commandBuffer = VK_NULL_HANDLE;
-  VkFence fence = VK_NULL_HANDLE;
-  VkBuffer buffer = VK_NULL_HANDLE;
-  VkDeviceMemory bufferMemory = VK_NULL_HANDLE;
-  uint64_t bufferSize = 0;
-  VkFFTApplication app = VKFFT_ZERO_INIT;
-  VkFFTConfiguration config = VKFFT_ZERO_INIT;
-  VkFFTLaunchParams launchParams = VKFFT_ZERO_INIT;
+  std::array<Slot, kSlotCount> slots{};
+  int nextSlot = 0;
   bool initialized = false;
 
   ~VkfftContext() { Destroy(); }
@@ -253,87 +263,102 @@ struct VulkanStreamingUpsampler::VkfftContext {
       return fail("Failed to create Vulkan command pool");
     }
 
+    VkPhysicalDeviceMemoryProperties memProps{};
+    vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProps);
+    const uint64_t bufferSize =
+        static_cast<uint64_t>(sizeof(float) * 2 * fftSize);
+
+    std::array<VkCommandBuffer, kSlotCount> commandBuffers{};
     VkCommandBufferAllocateInfo commandBufferInfo{};
     commandBufferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     commandBufferInfo.commandPool = commandPool;
     commandBufferInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    commandBufferInfo.commandBufferCount = 1;
-    if (vkAllocateCommandBuffers(device, &commandBufferInfo, &commandBuffer) !=
-        VK_SUCCESS) {
-      return fail("Failed to allocate Vulkan command buffer");
+    commandBufferInfo.commandBufferCount = kSlotCount;
+    if (vkAllocateCommandBuffers(device, &commandBufferInfo,
+                                 commandBuffers.data()) != VK_SUCCESS) {
+      return fail("Failed to allocate Vulkan command buffers");
     }
 
-    VkFenceCreateInfo fenceInfo{};
-    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    if (vkCreateFence(device, &fenceInfo, nullptr, &fence) != VK_SUCCESS) {
-      return fail("Failed to create Vulkan fence");
-    }
+    for (int i = 0; i < kSlotCount; ++i) {
+      Slot &slot = slots[i];
+      slot.commandBuffer = commandBuffers[i];
+      slot.bufferSize = bufferSize;
 
-    bufferSize = static_cast<uint64_t>(sizeof(float) * 2 * fftSize);
-    VkBufferCreateInfo bufferInfo{};
-    bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    bufferInfo.size = bufferSize;
-    bufferInfo.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
-                       VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
-                       VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-    bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    if (vkCreateBuffer(device, &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
-      return fail("Failed to create Vulkan buffer");
-    }
-
-    VkMemoryRequirements memReq{};
-    vkGetBufferMemoryRequirements(device, buffer, &memReq);
-    VkPhysicalDeviceMemoryProperties memProps{};
-    vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProps);
-    uint32_t memoryTypeIndex = UINT32_MAX;
-    for (uint32_t i = 0; i < memProps.memoryTypeCount; ++i) {
-      if ((memReq.memoryTypeBits & (1u << i)) &&
-          (memProps.memoryTypes[i].propertyFlags &
-           (VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-            VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)) ==
-              (VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-               VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)) {
-        memoryTypeIndex = i;
-        break;
+      VkFenceCreateInfo fenceInfo{};
+      fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+      fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+      if (vkCreateFence(device, &fenceInfo, nullptr, &slot.fence) !=
+          VK_SUCCESS) {
+        return fail("Failed to create Vulkan fence");
       }
-    }
-    if (memoryTypeIndex == UINT32_MAX) {
-      return fail("Failed to find Vulkan host-visible memory");
+
+      VkBufferCreateInfo bufferInfo{};
+      bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+      bufferInfo.size = bufferSize;
+      bufferInfo.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+                         VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
+                         VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+      bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+      if (vkCreateBuffer(device, &bufferInfo, nullptr, &slot.buffer) !=
+          VK_SUCCESS) {
+        return fail("Failed to create Vulkan buffer");
+      }
+
+      VkMemoryRequirements memReq{};
+      vkGetBufferMemoryRequirements(device, slot.buffer, &memReq);
+      uint32_t memoryTypeIndex = UINT32_MAX;
+      for (uint32_t type = 0; type < memProps.memoryTypeCount; ++type) {
+        if ((memReq.memoryTypeBits & (1u << type)) &&
+            (memProps.memoryTypes[type].propertyFlags &
+             (VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+              VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)) ==
+                (VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                 VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)) {
+          memoryTypeIndex = type;
+          break;
+        }
+      }
+      if (memoryTypeIndex == UINT32_MAX) {
+        return fail("Failed to find Vulkan host-visible memory");
+      }
+
+      VkMemoryAllocateInfo allocInfo{};
+      allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+      allocInfo.allocationSize = memReq.size;
+      allocInfo.memoryTypeIndex = memoryTypeIndex;
+      if (vkAllocateMemory(device, &allocInfo, nullptr, &slot.bufferMemory) !=
+          VK_SUCCESS) {
+        return fail("Failed to allocate Vulkan buffer memory");
+      }
+
+      if (vkBindBufferMemory(device, slot.buffer, slot.bufferMemory, 0) !=
+          VK_SUCCESS) {
+        return fail("Failed to bind Vulkan buffer memory");
+      }
+
+      slot.config = VKFFT_ZERO_INIT;
+      slot.config.FFTdim = 1;
+      slot.config.size[0] = fftSize;
+      slot.config.device = &device;
+      slot.config.physicalDevice = &physicalDevice;
+      slot.config.queue = &queue;
+      slot.config.commandPool = &commandPool;
+      slot.config.fence = &slot.fence;
+      slot.config.buffer = &slot.buffer;
+      slot.config.bufferSize = &slot.bufferSize;
+      slot.config.normalize = 1;
+
+      VkFFTResult res = initializeVkFFT(&slot.app, slot.config);
+      if (res != VKFFT_SUCCESS) {
+        return fail("Failed to initialize VkFFT");
+      }
+
+      slot.launchParams = VKFFT_ZERO_INIT;
+      slot.launchParams.buffer = &slot.buffer;
+      slot.launchParams.commandBuffer = &slot.commandBuffer;
+      slot.initialized = true;
     }
 
-    VkMemoryAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    allocInfo.allocationSize = memReq.size;
-    allocInfo.memoryTypeIndex = memoryTypeIndex;
-    if (vkAllocateMemory(device, &allocInfo, nullptr, &bufferMemory) !=
-        VK_SUCCESS) {
-      return fail("Failed to allocate Vulkan buffer memory");
-    }
-
-    if (vkBindBufferMemory(device, buffer, bufferMemory, 0) != VK_SUCCESS) {
-      return fail("Failed to bind Vulkan buffer memory");
-    }
-
-    config = VKFFT_ZERO_INIT;
-    config.FFTdim = 1;
-    config.size[0] = fftSize;
-    config.device = &device;
-    config.physicalDevice = &physicalDevice;
-    config.queue = &queue;
-    config.commandPool = &commandPool;
-    config.fence = &fence;
-    config.buffer = &buffer;
-    config.bufferSize = &bufferSize;
-    config.normalize = 1;
-
-    VkFFTResult res = initializeVkFFT(&app, config);
-    if (res != VKFFT_SUCCESS) {
-      return fail("Failed to initialize VkFFT");
-    }
-
-    launchParams = VKFFT_ZERO_INIT;
-    launchParams.buffer = &buffer;
-    launchParams.commandBuffer = &commandBuffer;
     initialized = true;
     return true;
   }
@@ -342,20 +367,29 @@ struct VulkanStreamingUpsampler::VkfftContext {
     if (device != VK_NULL_HANDLE) {
       vkDeviceWaitIdle(device);
     }
-    if (initialized) {
-      deleteVkFFT(&app);
-    }
-    if (buffer != VK_NULL_HANDLE) {
-      vkDestroyBuffer(device, buffer, nullptr);
-      buffer = VK_NULL_HANDLE;
-    }
-    if (bufferMemory != VK_NULL_HANDLE) {
-      vkFreeMemory(device, bufferMemory, nullptr);
-      bufferMemory = VK_NULL_HANDLE;
-    }
-    if (fence != VK_NULL_HANDLE) {
-      vkDestroyFence(device, fence, nullptr);
-      fence = VK_NULL_HANDLE;
+    for (auto &slot : slots) {
+      if (slot.initialized) {
+        deleteVkFFT(&slot.app);
+        slot.initialized = false;
+      }
+      if (slot.buffer != VK_NULL_HANDLE) {
+        vkDestroyBuffer(device, slot.buffer, nullptr);
+        slot.buffer = VK_NULL_HANDLE;
+      }
+      if (slot.bufferMemory != VK_NULL_HANDLE) {
+        vkFreeMemory(device, slot.bufferMemory, nullptr);
+        slot.bufferMemory = VK_NULL_HANDLE;
+      }
+      if (slot.fence != VK_NULL_HANDLE) {
+        vkDestroyFence(device, slot.fence, nullptr);
+        slot.fence = VK_NULL_HANDLE;
+      }
+      slot.commandBuffer = VK_NULL_HANDLE;
+      slot.bufferSize = 0;
+      slot.launchParams = VKFFT_ZERO_INIT;
+      slot.config = VKFFT_ZERO_INIT;
+      slot.app = VKFFT_ZERO_INIT;
+      slot.inFlight = false;
     }
     if (commandPool != VK_NULL_HANDLE) {
       vkDestroyCommandPool(device, commandPool, nullptr);
@@ -372,7 +406,35 @@ struct VulkanStreamingUpsampler::VkfftContext {
     initialized = false;
   }
 
-  bool Execute(int direction, std::string *errorMessage) {
+  int AcquireSlot() {
+    const int slot = nextSlot;
+    nextSlot = (nextSlot + 1) % kSlotCount;
+    return slot;
+  }
+
+  bool Wait(int slotIndex, std::string *errorMessage) {
+    if (!initialized) {
+      if (errorMessage) {
+        *errorMessage = "VkFFT context not initialized";
+      }
+      return false;
+    }
+    Slot &slot = slots[slotIndex];
+    if (!slot.inFlight) {
+      return true;
+    }
+    if (vkWaitForFences(device, 1, &slot.fence, VK_TRUE, 100000000000) !=
+        VK_SUCCESS) {
+      if (errorMessage) {
+        *errorMessage = "Failed to wait for Vulkan fence";
+      }
+      return false;
+    }
+    slot.inFlight = false;
+    return true;
+  }
+
+  bool Execute(int slotIndex, int direction, std::string *errorMessage) {
     if (!initialized) {
       if (errorMessage) {
         *errorMessage = "VkFFT context not initialized";
@@ -380,19 +442,25 @@ struct VulkanStreamingUpsampler::VkfftContext {
       return false;
     }
 
-    vkResetCommandBuffer(commandBuffer, 0);
+    Slot &slot = slots[slotIndex];
+    if (slot.inFlight) {
+      if (!Wait(slotIndex, errorMessage)) {
+        return false;
+      }
+    }
+    vkResetCommandBuffer(slot.commandBuffer, 0);
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-    if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {
+    if (vkBeginCommandBuffer(slot.commandBuffer, &beginInfo) != VK_SUCCESS) {
       if (errorMessage) {
         *errorMessage = "Failed to begin Vulkan command buffer";
       }
       return false;
     }
 
-    launchParams.commandBuffer = &commandBuffer;
-    VkFFTResult res = VkFFTAppend(&app, direction, &launchParams);
+    slot.launchParams.commandBuffer = &slot.commandBuffer;
+    VkFFTResult res = VkFFTAppend(&slot.app, direction, &slot.launchParams);
     if (res != VKFFT_SUCCESS) {
       if (errorMessage) {
         *errorMessage = "VkFFT execution failed";
@@ -400,7 +468,7 @@ struct VulkanStreamingUpsampler::VkfftContext {
       return false;
     }
 
-    if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
+    if (vkEndCommandBuffer(slot.commandBuffer) != VK_SUCCESS) {
       if (errorMessage) {
         *errorMessage = "Failed to end Vulkan command buffer";
       }
@@ -410,26 +478,26 @@ struct VulkanStreamingUpsampler::VkfftContext {
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &commandBuffer;
-    if (vkQueueSubmit(queue, 1, &submitInfo, fence) != VK_SUCCESS) {
+    submitInfo.pCommandBuffers = &slot.commandBuffer;
+    if (vkResetFences(device, 1, &slot.fence) != VK_SUCCESS) {
+      if (errorMessage) {
+        *errorMessage = "Failed to reset Vulkan fence";
+      }
+      return false;
+    }
+    if (vkQueueSubmit(queue, 1, &submitInfo, slot.fence) != VK_SUCCESS) {
       if (errorMessage) {
         *errorMessage = "Failed to submit Vulkan queue";
       }
       return false;
     }
-    if (vkWaitForFences(device, 1, &fence, VK_TRUE, 100000000000) !=
-        VK_SUCCESS) {
-      if (errorMessage) {
-        *errorMessage = "Failed to wait for Vulkan fence";
-      }
-      return false;
-    }
-    vkResetFences(device, 1, &fence);
+    slot.inFlight = true;
     return true;
   }
 
-  bool Map(float **data, std::string *errorMessage) {
-    if (vkMapMemory(device, bufferMemory, 0, bufferSize, 0,
+  bool Map(int slotIndex, float **data, std::string *errorMessage) {
+    Slot &slot = slots[slotIndex];
+    if (vkMapMemory(device, slot.bufferMemory, 0, slot.bufferSize, 0,
                     reinterpret_cast<void **>(data)) != VK_SUCCESS) {
       if (errorMessage) {
         *errorMessage = "Failed to map Vulkan buffer memory";
@@ -439,7 +507,10 @@ struct VulkanStreamingUpsampler::VkfftContext {
     return true;
   }
 
-  void Unmap() { vkUnmapMemory(device, bufferMemory); }
+  void Unmap(int slotIndex) {
+    Slot &slot = slots[slotIndex];
+    vkUnmapMemory(device, slot.bufferMemory);
+  }
 };
 #else
 struct VulkanStreamingUpsampler::VkfftContext {};
@@ -535,19 +606,26 @@ std::vector<float> VulkanStreamingUpsampler::ProcessBlock(const float *input,
 
 #if defined(ENABLE_VULKAN) && defined(USE_VKFFT)
   if (vkfft_) {
+    const int slot = vkfft_->AcquireSlot();
     float *mapped = nullptr;
-    if (!vkfft_->Map(&mapped, nullptr)) {
+    if (!vkfft_->Wait(slot, nullptr)) {
+      return {};
+    }
+    if (!vkfft_->Map(slot, &mapped, nullptr)) {
       return {};
     }
     for (std::size_t i = 0; i < fftSize; ++i) {
       mapped[2 * i] = timeBuffer[i];
       mapped[2 * i + 1] = 0.0f;
     }
-    vkfft_->Unmap();
-    if (!vkfft_->Execute(-1, nullptr)) {
+    vkfft_->Unmap(slot);
+    if (!vkfft_->Execute(slot, -1, nullptr)) {
       return {};
     }
-    if (!vkfft_->Map(&mapped, nullptr)) {
+    if (!vkfft_->Wait(slot, nullptr)) {
+      return {};
+    }
+    if (!vkfft_->Map(slot, &mapped, nullptr)) {
       return {};
     }
     for (std::size_t i = 0; i < fftSize; ++i) {
@@ -556,18 +634,21 @@ std::vector<float> VulkanStreamingUpsampler::ProcessBlock(const float *input,
       mapped[2 * i] = filtered.real();
       mapped[2 * i + 1] = filtered.imag();
     }
-    vkfft_->Unmap();
-    if (!vkfft_->Execute(1, nullptr)) {
+    vkfft_->Unmap(slot);
+    if (!vkfft_->Execute(slot, 1, nullptr)) {
       return {};
     }
-    if (!vkfft_->Map(&mapped, nullptr)) {
+    if (!vkfft_->Wait(slot, nullptr)) {
+      return {};
+    }
+    if (!vkfft_->Map(slot, &mapped, nullptr)) {
       return {};
     }
     std::vector<float> output(upsampledCount, 0.0f);
     for (std::size_t i = 0; i < upsampledCount; ++i) {
       output[i] = mapped[2 * (overlapSize + i)];
     }
-    vkfft_->Unmap();
+    vkfft_->Unmap(slot);
     overlap_.assign(timeBuffer.end() - static_cast<std::ptrdiff_t>(overlapSize),
                     timeBuffer.end());
     return output;
