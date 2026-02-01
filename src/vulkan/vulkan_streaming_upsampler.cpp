@@ -1,7 +1,7 @@
 #include "vulkan/vulkan_streaming_upsampler.h"
 
-#include <array>
 #include <algorithm>
+#include <array>
 #include <cctype>
 #include <filesystem>
 #include <fstream>
